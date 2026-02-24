@@ -14,6 +14,9 @@ if (mysqli_connect_errno()) {
    echo "Failed to connect to MYSqL: " . mysqli_connect_error();
    exit();
 }
+else {
+   echo "Successfully connected to mysql database";
+}
 
 $stmt = $con->prepare("SELECT password_hash FROM users WHERE id = ?");
 $uname = $username;
