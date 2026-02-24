@@ -3,13 +3,34 @@
 require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
+require_once('login.php.inc');
 
 function doLogin($username,$password)
 {
-    // lookup username in databas
+$con = mysqli_connect("127.0.0.1", "keven" ,"12345", "GC_USERS_DB");
+
+// Check connection
+if (mysqli_connect_errno()) {
+   echo "Failed to connect to MYSqL: " . mysqli_connect_error();
+   exit();
+}
+
+$stmt = $con->prepare("SELECT password_hash FROM users WHERE id = ?");
+$uname = $username;
+$pword = $password;
+$stmt->bind_param("s", $uname);
+$stmt->execute();
+$stmt->bind_result($dbpword);
+if ($pword = $dbpword) {
+	$response = "yes";
+	return $response;
+}
+    // lookup username in database
     // check password
-    return true;
-    //return false if not valid
+    // $login = new loginDB();
+    //return $login->validateLogin($username,$password);
+    //return true;
+    //return true if not valid
 }
 
 function requestProcessor($request)
@@ -32,9 +53,7 @@ function requestProcessor($request)
 
 $server = new rabbitMQServer("testRabbitMQ.ini","testServer");
 
-echo "testRabbitMQServer BEGIN".PHP_EOL;
 $server->process_requests('requestProcessor');
-echo "testRabbitMQServer END".PHP_EOL;
 exit();
 ?>
 
