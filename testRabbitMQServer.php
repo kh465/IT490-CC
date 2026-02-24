@@ -21,9 +21,8 @@ $pword = $password;
 $stmt->bind_param("s", $uname);
 $stmt->execute();
 $stmt->bind_result($dbpword);
-if ($pword = $dbpword) {
-	$response = "yes";
-	return $response;
+if ($pword == $dbpword) {
+	return true;
 }
     // lookup username in database
     // check password
