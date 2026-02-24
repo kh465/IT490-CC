@@ -22,8 +22,10 @@ $stmt = $con->prepare("SELECT password_hash FROM users WHERE id = ?");
 $uname = $username;
 $pword = $password;
 $stmt->bind_param("s", $uname);
+echo $stmt;
 $stmt->execute();
 $stmt->bind_result($dbpword);
+echo $dbpword;
 if ($pword == $dbpword) {
 	return true;
 }
