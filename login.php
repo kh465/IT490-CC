@@ -1,8 +1,14 @@
 <?php
 session_start();
 require 'rpc_client.php';
+
 $error = "";
 $success = "";
+
+
+if (isset($_GET['error']) && $_GET['error'] === 'invalid_session') {
+    $error = "Your session has expired. Please log in again.";
+}
 
 if(isset($_POST['login'])) {
 
@@ -10,28 +16,35 @@ if(isset($_POST['login'])) {
     $password = trim($_POST['password']);
 
     if(empty($username) || empty($password)) {
-        $error = "Invalid Username or Password";
+        $error = "Please enter both your Username and Password.";
     } else {
+    
+        try {
+            $client = new rabbitMQClient("$username", "$password");
 
-        $rpc = new AuthRPC();
+            $request = array();
+            $request['type'] = "login";
+            $request['username'] = "$username";
+            $request['password'] = "$password";
+            $request["message"] = "login attempt";
 
-        $response = $rpc->call([
-            "type" => "login",
-            "username" => $username,
-            "password" => $password
-        ]);
+            $response = $client->send_request($request);
 
-        if($response['status'] === "success") {
-            $_SESSION["username"] = $username;
-            $_SESSION["session_key"] = $response['session_key'];
-            header("Location: index.php");
-            exit();
-        } else {
-            $error = "Invalid Username or Password";
+            if($response['status'] === "true") { // logs the user in and sends them to main page
+                $_SESSION["username"] = $username;
+                $_SESSION["session_key"] = $response['session_key'];
+                header("Location: index.php");
+                exit();
+            } else {
+
+                $error = "Invalid Username or Password.";
+            }
+
+        } catch (Exception $e) {// for any other possible error this gets thrown
+            $error = "The authentication server is currently unreachable. Please try again later.";
         }
     }
 }
-
 ?>
 
 <!DOCTYPE html>
