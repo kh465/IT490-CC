@@ -53,7 +53,7 @@ $callback = function ($msg) use ($pdo, $channel) {
 
             // returns true for successful login
             $response = [
-                "status" => "success",  
+                "status" => "true",  
                 "session_key" => $session_key
             ];
 
@@ -62,7 +62,7 @@ $callback = function ($msg) use ($pdo, $channel) {
             
             // RETurn false or failure to login
             $response = [
-                "status" => "failure", 
+                "status" => "false", 
                 "message" => "Invalid credentials"
             ];
         }
@@ -123,4 +123,4 @@ $channel->basic_consume('auth_queue', '', false, false, false, false, $callback)
 while ($channel->is_consuming()) {
     $channel->wait();
 }
-?>
+
