@@ -19,20 +19,24 @@ else {
 }
 
 $stmt = $con->prepare("SELECT password_hash FROM users WHERE id = ?");
-$stmt->bind_param("s", $username);
+$uname = $username;
+$pword = $password;
+$stmt->bind_param("s", $uname);
 $stmt->execute();
-$result = $stmt->get_result();
-
-if ($row = $result->fetch_assoc()) {
-	$dbpword = $row['password_hash'];
-	if ($dbpword == $password) {
-		echo "\ntrue!";
-		return true;
-	}
-	else {
-		echo "\nfalse!";
-		return false;
-	}
+$result = $stmt->bind_result();
+if ($result) {
+	$row = $result->fetch_assoc();
+	$s_result = $row['password_hash'];
+	echo $s_result;
+}
+//if ($row = $result->fetch_assoc()) {
+//	echo $pword . "pass: " . $row['password_hash'];
+//} else {
+//	echo "user not found?";
+//}
+if ($pword == $result) {
+	echo "we are in here!";
+	return true;
 }
     // lookup username in database
     // check password
