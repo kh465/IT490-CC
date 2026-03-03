@@ -1,6 +1,10 @@
 <?php
 session_start();
-require 'rpc_client.php';
+require_once('path.inc');
+require_once('get_host_info.inc');
+require_once('rabbitMQLib.inc');
+require_once('host.ini');
+
 
 $error = "";
 $success = "";
@@ -20,7 +24,7 @@ if(isset($_POST['login'])) {
     } else {
     
         try {
-            $client = new rabbitMQClient("$username", "$password");
+            $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
 
             $request = array();
             $request['type'] = "login";
@@ -29,8 +33,9 @@ if(isset($_POST['login'])) {
             $request["message"] = "login attempt";
 
             $response = $client->send_request($request);
+            var_dump($reponse); 
 
-            if($response['status'] === "true") { // logs the user in and sends them to main page
+            if($response){      //['status'] === "true") { // logs the user in and sends them to main page
                 $_SESSION["username"] = $username;
                 $_SESSION["session_key"] = $response['session_key'];
                 header("Location: index.php");
@@ -66,6 +71,7 @@ if(isset($_POST['login'])) {
             <li><a href="logout.php">Logout</a></li>
             <?php else: ?>
             <li><a href="login.php">Login</a></li>
+            <li><a href="register.php">Register</a></li>
             <?php endif; ?>
         </ul>
     </nav>

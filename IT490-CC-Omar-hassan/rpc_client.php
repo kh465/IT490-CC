@@ -13,7 +13,7 @@ class AuthRPC {
     private $corr_id;
 
     public function __construct() {
-        $this->connection = new AMQPStreamConnection('RABBITMQ_IP', 5672, 'guest', 'guest');
+        $this->connection = new AMQPStreamConnection('100.116.159.74', 5672, 'test', 'test');
         $this->channel = $this->connection->channel();
 
         list($this->callback_queue,,) = $this->channel->queue_declare("", false, false, true, false);
