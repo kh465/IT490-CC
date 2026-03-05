@@ -21,8 +21,8 @@ if(!isset($_SESSION["username"])){
     header("Location:login.php");
     exit();
 }
-
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -30,6 +30,21 @@ if(!isset($_SESSION["username"])){
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Main Page</title>
     <link rel="stylesheet" type="text/css" href="styles.css">
+    
+    <script src="https://cdn.maptiler.com/maptiler-sdk-js/v3.10.2/maptiler-sdk.umd.min.js"></script>
+    <link href="https://cdn.maptiler.com/maptiler-sdk-js/v3.10.2/maptiler-sdk.css" rel="stylesheet" />
+    
+    <style>
+        /* map styling for visual represention*/
+        #map {
+            width: 100%;
+            height: 500px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar">
@@ -46,8 +61,35 @@ if(!isset($_SESSION["username"])){
     </nav>
     <div class="main-container">
         <h1>Home</h1>
-        <p> View your recent Games here</p>
+        
+        <div class="search-container" style="margin-bottom: 20px;">
+            <form action="search_results.php" method="GET">
+                <input type="text" name="query" placeholder="Search..." required style="padding: 8px; width: 60%; max-width: 400px;">
+                <input type="submit" value="Search" style="padding: 8px 16px;">
+            </form>
+        </div>
+        <p>See your favoritie desitinations/events below </p>
+
+        <div id="map"></div>
 
     </div>
+
+    <script> // javascript logic
+        // hard-coded api key might need to move to .env based on kehoe's advice
+        maptilersdk.config.apiKey = 'SrrbV3S3FnYJS3gcSWTk';
+
+        // Creat the map
+        const map = new maptilersdk.Map({
+            container: 'map', // Connects to the map id mentioned above
+            style: maptilersdk.MapStyle.STREETS,
+            center: [-74.1724, 40.7357], // centered on newark
+            zoom: 15
+        });
+
+        // little pin feature to show wehrre user is at or cucrent location. 
+        new maptilersdk.Marker({color: "#FF0000"})
+            .setLngLat([-74.1724, 40.7357]) // newark
+            .addTo(map);
+    </script>
 </body>
 </html>
