@@ -35,7 +35,6 @@ if(!isset($_SESSION["username"])){
     <link href="https://cdn.maptiler.com/maptiler-sdk-js/v3.10.2/maptiler-sdk.css" rel="stylesheet" />
     
     <style>
-        /* map styling for visual represention*/
         #map {
             width: 100%;
             height: 500px;
@@ -44,6 +43,16 @@ if(!isset($_SESSION["username"])){
             margin-top: 20px;
             margin-bottom: 20px;
         }
+
+        /* Geo status badge shown beneath the search bar */
+        #geo-status {
+            font-size: 0.8rem;
+            margin-top: 6px;
+            height: 18px; /* Reserve space so layout doesn't jump */
+        }
+        .geo-ok      { color: #27ae60; }
+        .geo-default { color: #e67e22; }
+        .geo-loading { color: #888; }
     </style>
 </head>
 <body>
@@ -59,37 +68,92 @@ if(!isset($_SESSION["username"])){
             <?php endif; ?>
         </ul>
     </nav>
+
     <div class="main-container">
         <h1>Home</h1>
         
-        <div class="search-container" style="margin-bottom: 20px;">
-            <form action="search_results.php" method="GET">
-                <input type="text" name="query" placeholder="Search..." required style="padding: 8px; width: 60%; max-width: 400px;">
+        <div class="search-container" style="margin-bottom: 6px;">
+            
+            <form id="search-form" action="search_results.php" method="GET">
+                <input type="text"
+                       name="query"
+                       placeholder="Search places, events, restaurants..."
+                       required
+                       style="padding: 8px; width: 60%; max-width: 400px;">
+
+                <input type="hidden" id="lat-input" name="lat" value="40.7357">
+                <input type="hidden" id="lng-input" name="lng" value="-74.1724">
+
                 <input type="submit" value="Search" style="padding: 8px 16px;">
             </form>
         </div>
-        <p>See your favoritie desitinations/events below </p>
+
+        
+        <div id="geo-status" class="geo-loading">Tracking your favorite destinations…</div>
+
+        <p>See your favourite destinations/events below</p>
 
         <div id="map"></div>
-
     </div>
 
-    <script> // javascript logic
-        // hard-coded api key might need to move to .env based on kehoe's advice
+    <script>
+        
+        // TODO: move API key to .env per Kehoe's advice or professional development
         maptilersdk.config.apiKey = 'SrrbV3S3FnYJS3gcSWTk';
 
-        // Creat the map
+        // Default location is newark,NJ
+        const DEFAULT_LNG = -74.1724;
+        const DEFAULT_LAT =  40.7357;
+
         const map = new maptilersdk.Map({
-            container: 'map', // Connects to the map id mentioned above
+            container: 'map',
             style: maptilersdk.MapStyle.STREETS,
-            center: [-74.1724, 40.7357], // centered on newark
-            zoom: 15
+            center: [DEFAULT_LNG, DEFAULT_LAT],
+            zoom: 14
         });
 
-        // little pin feature to show wehrre user is at or cucrent location. 
-        new maptilersdk.Marker({color: "#FF0000"})
-            .setLngLat([-74.1724, 40.7357]) // newark
+        // THis holds a reference to the user marker so we can move it later when showing th user thier optional locations
+        const userMarker = new maptilersdk.Marker({ color: "#FF0000" })
+            .setLngLat([DEFAULT_LNG, DEFAULT_LAT])
             .addTo(map);
+
+        // geolocation logic 
+        const geoStatus  = document.getElementById('geo-status');
+        const latInput   = document.getElementById('lat-input');
+        const lngInput   = document.getElementById('lng-input');
+
+        function onGeoSuccess(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+
+            // Feed the real coordinates into the hidden form fields
+            latInput.value = lat;
+            lngInput.value = lng;
+
+            // Move the map and marker to the user's actual position
+            map.flyTo({ center: [lng, lat], zoom: 14 });
+            userMarker.setLngLat([lng, lat]);
+
+            geoStatus.textContent  = 'Using your current location for searches';
+            geoStatus.className    = 'geo-ok';
+        }
+
+        function onGeoError(err) {
+            // Silently fall back to Newark if any error occurs
+            geoStatus.textContent = ' Desistination unavailable defaulting to Newark, NJ';
+            geoStatus.className   = 'geo-default';
+        }
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(onGeoSuccess, onGeoError, {
+                timeout:            8000,
+                maximumAge:         60000, 
+                enableHighAccuracy: false   
+            });
+        } else {
+            geoStatus.textContent = 'Geolocation not supported';
+            geoStatus.className   = 'geo-default';
+        }
     </script>
 </body>
 </html>
