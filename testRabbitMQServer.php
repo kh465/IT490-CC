@@ -6,6 +6,26 @@ require_once('rabbitMQLib.inc');
 require_once('login.php.inc');
 
 
+function doBooking ($user_id, $booking_type)
+{
+$con = mysqli_connect("127.0.0.1", "keven", "12345", "GC_USERS_DB");
+// Check connection
+if (mysqli_connect_errno()){
+	echo "Failed to connect to MYSqL: " . mysqli_connect_error();
+	exit();
+}
+   else{
+   	echo "Successfully connected to mysql database";
+
+}
+
+$stmt = $con-> prepare("SELECT id FROM users WHERE  id = ?");
+$stmt0->bind_param("s", $username);
+$stmt->execute();
+$result = $stmt->get_result();
+
+}
+
 function doRegister ($username, $password)
 {
  
@@ -16,7 +36,7 @@ if (mysqli_connect_errno()) {
 	exit(); 
 }
   else{
-	echo "Succesfully connected to mysql databse";
+	echo "Succesfully connected to mysql database";
 }
   
 $stmt = $con-> prepare("SELECT id FROM users WHERE id = ?");
@@ -99,8 +119,8 @@ function requestProcessor($request)
   {
     case "login":
       return doLogin($request['username'],$request['password']);
-    case "validate_session":
-      return doValidate($request['sessionId']);
+    case "book":
+      return doBooking($request['user_id'],$request['booking_type']);
     case "register":
       return doRegister($request['username'],$request['password']);
 	
