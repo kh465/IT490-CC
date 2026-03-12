@@ -172,11 +172,12 @@ if (!empty($activity) && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['
             . number_format((float)$activity['price']['amount'], 2);
     }
 
-
-    $eventDate = implode(' · ', array_filter([
-        $priceStr ? "From $priceStr" : '',
-        isset($activity['minimumDuration']) ? formatDuration($activity['minimumDuration']) : '',
-    ]));
+    $parts = [];
+    if($priceStr) $parts[] = "From $priceStr";
+    if(isset($activity['minimumDuration']) && formatDuration($activity['minimumDuration'])) {
+     $parts[] = formatDuration($activity['minimumDuration']);
+    }
+    $eventDate = implode(' · ', $parts);
 
     try {
         $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
@@ -212,31 +213,27 @@ if (!empty($activity) && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['
 }
 
 // helpers with updated logic 
-function formatDuration(?string $iso): string {
+function formatDuration($iso): string {
     if (!$iso) return '';
     
-    $hours = 0;
-    $minutes = 0;
-    
-    // takes out hours if present if not move to minutes
-    $hourPos = strpos($iso, 'H');
+    $time_part = explode('T', $iso)[1];
 
-    if ($hourPos !== false) {
-      	  $hours = (int) substr($iso, strpos($iso, 'T') + 1, $hourPos - strpos($iso, 'T') - 1);
+    if(strpos($time_part, 'H') !== false) {
+    $hours   = (int)explode('H', $time_part)[0];
+    $after_h = explode('H', $time_part)[1];
+    }    else {
+        $after_h = $time_part;
     }
-    // if there are no hours then minutes are assumed to exist and are taken out
-    $minPos = strpos($iso, 'M');
-    if ($minPos !== false) {
 
-      	  $start = $hourPos !== false ? $hourPos + 1 : strpos($iso, 'T') + 1;
-        	    $minutes = (int) substr($iso, $start, $minPos - $start);
-
+    if(strpos($after_h, 'M') !== false) {
+     $minutes = (int)explode('M', $after_h)[0];
     }
-    if ($hours && $minutes) return "{$hours}h {$minutes}m";
 
-    if ($hours) return "{$hours}h";
+    if(!empty($hours) && !empty($minutes)) return "{$hours}h {$minutes}m";
 
-    if ($minutes) return "{$minutes}m";
+    if(!empty($hours))   return "{$hours}h";
+    if(!empty($minutes)) return "{$minutes}m";
+
     return '';
 }
 

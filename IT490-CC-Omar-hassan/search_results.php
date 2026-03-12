@@ -153,22 +153,27 @@ try {
         if (empty($allActivities)) {
             $fetchError = "No activities or destinations found near your location.";
         } else {
-            $queryLower  = strtolower($query);
+            $queryLower = strtolower($query);
 
-            $filtered = array_filter($allActivities, function ($activity) use ($queryLower) {
+        foreach($allActivities as $act) {
+            $searchable = strtolower(
+            ($act['name']) . ' ' .
+            ($act['shortDescription']) . ' ' .
+            implode(' ', (array)($act['categories'] ?? []))
+        );
+            if(strpos($searchable, $queryLower) !== false) {
+                $filtered[] = $act;
+            }
+    }
 
-                $searchableText  = strtolower(implode(' ', [
-                    $activity['name']  ?? '',
-                    $activity['shortDescription'] ?? '',
-                    implode(' ', $activity['categories'] ?? []),
-                ]));
+        $pool = !empty($filtered) ? $filtered : $allActivities;
 
-                return str_contains($searchableText, $queryLower);
-            });
-
-            $pool = !empty($filtered) ? $filtered : $allActivities;
-            $results = array_slice(array_values($pool), 0, 3);
-
+        $count = 0;
+        foreach($pool as $item) {
+        if($count >= 3) break;
+        $results[] = $item;
+        $count++;
+        }
             if (empty($results)) {
                 $fetchError = "No activities found for <strong>" . htmlspecialchars($query) . "</strong> near your location.";
             }
@@ -191,33 +196,29 @@ function amadeusPrice(array $activity): string {
     return "$currency $amount";
 }
 
-function formatDuration(?string $iso): string {
+function formatDuration($iso): string {
     if (!$iso) return '';
     
-    $hours = 0;
-    $minutes = 0;
-    
-    // takes out hours if present if not move to minutes
-     $hourPos = strpos($iso, 'H');
+    $time_part = explode('T', $iso)[1];
 
-    if ($hourPos !== false) {
-      	  $hours = (int) substr($iso, strpos($iso, 'T') + 1, $hourPos - strpos($iso, 'T') - 1);
+    if(strpos($time_part, 'H') !== false) {
+        $hours = (int)explode('H', $time_part)[0];
+
+        $after_h = explode('H', $time_part)[1];
+
+    } else {
+        $after_h = $time_part;
     }
-    
-    // if there are no hours then minutes are assumed to exist and are taken out
-    $minPos = strpos($iso, 'M');
-    if ($minPos !== false) {
 
-      	  $start = $hourPos !== false ? $hourPos + 1 : strpos($iso, 'T') + 1;
-        	    $minutes = (int) substr($iso, $start, $minPos - $start);
+    if(strpos($after_h, 'M') !== false) {
+        $minutes = (int)explode('M', $after_h)[0];
+    }   
 
-    }
-    
-    if ($hours && $minutes) return "{$hours}h {$minutes}m";
+    if(!empty($hours) && !empty($minutes)) return "{$hours}h {$minutes}m";
 
-    if ($hours) return "{$hours}h";
+    if(!empty($hours))   return "{$hours}h";
+    if(!empty($minutes)) return "{$minutes}m";
 
-    if ($minutes) return "{$minutes}m";
     return '';
 
 }
@@ -299,7 +300,7 @@ function amadeusRatingStars(string $rating): string {
                 $duration = formatDuration($activity['minimumDuration']);
                 $priceStr  = amadeusPrice($activity);
 
-                $cats = $activity['categories'];
+                $cats = isset($activity['categories']) ? (array)$activity['categories'] : [];
                 $pictures = $activity['pictures'];
 
                 $thumb = !empty($pictures) ? htmlspecialchars($pictures[0]) : '';
