@@ -63,13 +63,13 @@ function getAmadeusToken(): string {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
 
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
 
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
 
-            'grant_type'  => 'client_credentials',
-        '   client_id'  => AMADEUS_CLIENT_ID,
+            'grant_type'   => 'client_credentials',
+            'client_id'=> AMADEUS_CLIENT_ID,
              'client_secret' => AMADEUS_CLIENT_SECRET,
     ]));
 
@@ -102,8 +102,8 @@ function getAmadeusToken(): string {
 
 // --- Input validation ---
 $actId = trim($_GET['act_id'] ?? '');
-$lat   = filter_var($_GET['lat'] ?? '', FILTER_VALIDATE_FLOAT) ?: 40.7357;
-$lng   = filter_var($_GET['lng'] ?? '', FILTER_VALIDATE_FLOAT) ?: -74.1724;
+$lat = filter_var($_GET['lat'] ?? '', FILTER_VALIDATE_FLOAT) ?: 40.7357;
+$lng  = filter_var($_GET['lng'] ?? '', FILTER_VALIDATE_FLOAT) ?: -74.1724;
 
 if (empty($actId) || !preg_match('/^[a-zA-Z0-9\-]+$/', $actId)) {
     header("Location: index.php");
@@ -119,7 +119,7 @@ try {
 
     $ch = curl_init(AMADEUS_BASE_URL . '/v1/shopping/activities/' . urlencode($actId));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 12);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
 
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
@@ -169,7 +169,7 @@ if (!empty($activity) && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['
     $priceStr = '';
     if (!empty($activity['price']['amount'])) {
         $priceStr = ($activity['price']['currencyCode'] ?? 'USD') . ' '
-                  . number_format((float)$activity['price']['amount'], 2);
+            . number_format((float)$activity['price']['amount'], 2);
     }
 
 
@@ -185,13 +185,12 @@ if (!empty($activity) && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['
             'type'  => 'save_booking',
             'username' => $_SESSION['username'],
             'session_key'=> $_SESSION['session_key'],
-            'event_title' => $activity['name']             ?? 'Unnamed Activity',
-            'event_description' => $activity['description']
-                                ?? $activity['shortDescription'] ?? '',
+            'event_title' => $activity['name'] ?? 'Unnamed Activity',
+            'event_description' => $activity['description'] ?? $activity['shortDescription'],
             'event_date' => $eventDate,
             'event_address' => buildGeoString($activity),
-            'event_url' => $activity['bookingLink']      ?? '',
-            'event_thumbnail'  => $heroPhoto,
+            'event_url' => $activity['bookingLink'],
+            'event_thumbnail'=> $heroPhoto,
             'venue_name' => implode(', ', $activity['categories'] ?? []),
         ];
 
@@ -199,9 +198,11 @@ if (!empty($activity) && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['
 
         if ($response && $response['status'] === 'success') {
             $bookingSuccess = true;
-        } elseif ($response && $response['status'] === 'duplicate') {
+        } 
+        elseif ($response && $response['status'] === 'duplicate') {
             $alreadyBooked = true;
-        } else {
+        } 
+        else {
             $bookingError = $response['message'] ?? "Error: Save failed.";
         }
 
@@ -256,13 +257,13 @@ function amadeusRatingStars(string $rating): string {
 // --- Display values ---
 if (!empty($activity)) {
     $name = ($activity['name']  ?? 'Unnamed Activity');
-    $shortDesc = ($activity['shortDescription'] ?? '');
-    $description  = ($activity['description']      ?? '');
+    $shortDesc = ($activity['shortDescription']);
+    $description  = ($activity['description']);
     $rating = $activity['rating'] ?? null;
-    $bookingLink = $activity['bookingLink'] ?? '';
-    $cats = $activity['categories']  ?? [];
-    $pictures = $activity['pictures']  ?? [];
-    $duration = formatDuration($activity['minimumDuration'] ?? null);
+    $bookingLink = $activity['bookingLink'];
+    $cats = $activity['categories'] ;
+    $pictures = $activity['pictures']  ;
+    $duration = formatDuration($activity['minimumDuration']);
 
     $priceAmount = !empty($activity['price']['amount'])       ? (float)$activity['price']['amount'] : null;
     $priceCurrency = !empty($activity['price']['currencyCode']) ? $activity['price']['currencyCode'] : 'USD';
@@ -344,12 +345,15 @@ if (!empty($activity)) {
                 <?php if ($priceAmount !== null): ?>
                     <li><strong>Price:</strong> From <?php echo htmlspecialchars($priceCurrency); ?> <?php echo number_format($priceAmount, 2); ?></li>
                 <?php endif; ?>
+
                 <?php if ($rating !== null): ?>
                     <li><strong>Rating:</strong> <?php echo amadeusRatingStars((string)$rating); ?> <?php echo htmlspecialchars($rating); ?> / 5</li>
                 <?php endif; ?>
+
                 <?php if ($duration): ?>
                     <li><strong>Duration:</strong> <?php echo htmlspecialchars($duration); ?></li>
                 <?php endif; ?>
+                
                 <?php if ($geoLat && $geoLng): ?>
                     <li>
                         <strong>Location:</strong>
@@ -376,8 +380,8 @@ if (!empty($activity)) {
                            name="save_activity"
                            value="<?php
                                if ($bookingSuccess)    echo 'Saved';
-                               elseif ($alreadyBooked) echo 'Already Saved';
-                               else                    echo 'Save This Activity';
+                               elseif ($alreadyBooked) echo 'Already Booked';
+                               else                    echo 'Book this activity/destination';
                            ?>"
                            <?php echo ($bookingSuccess || $alreadyBooked) ? 'disabled' : ''; ?>
                            style="padding: 8px 16px;">
@@ -393,10 +397,13 @@ if (!empty($activity)) {
 
             <?php if ($bookingSuccess): ?>
                 <p style="color: green; font-weight: bold;"><strong><?php echo $name; ?></strong> saved to your account.</p>
+
             <?php elseif ($alreadyBooked): ?>
                 <p style="color: orange; font-weight: bold;">This activity is already in your saved list.</p>
+
             <?php elseif ($bookingError): ?>
                 <p style="color: red; font-weight: bold;"><?php echo htmlspecialchars($bookingError); ?></p>
+
             <?php endif; ?>
 
         <?php endif; ?>

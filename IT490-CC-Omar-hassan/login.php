@@ -33,7 +33,6 @@ if(isset($_POST['login'])) {
             $request["message"] = "login attempt";
 
             $response = $client->send_request($request);
-            var_dump($reponse); 
 
             if($response){      //['status'] === "true") { // logs the user in and sends them to main page
                 $_SESSION["username"] = $username;
