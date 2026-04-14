@@ -62,6 +62,8 @@ if(!isset($_SESSION["username"])){
             <li><a href="index.php">Home</a></li>
             <?php if (isset($_SESSION["username"])): ?>
             <li>Logged in as: <strong><?php echo htmlspecialchars($_SESSION["username"]); ?></strong></li>
+            <li><a href="review.php">Check your reviews</a></li>
+            <li><a href="get_bookings.php">See your bookings</a></li>
             <li><a href="logout.php">Logout</a></li>
             <?php else: ?>
             <li><a href="login.php">Login</a></li>

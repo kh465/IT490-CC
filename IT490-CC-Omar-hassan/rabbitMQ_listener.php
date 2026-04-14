@@ -20,7 +20,7 @@ use PhpAmqpLib\Message\AMQPMessage;
 
 // Rabbitmq connection
 $connection = new AMQPStreamConnection('100.116.159.74', 5672, 'test', 'test');
-$channel    = $connection->channel();
+$channel = $connection->channel();
 
 $channel->queue_declare('auth_queue', false, true, false, false);
 
@@ -28,14 +28,16 @@ $channel->queue_declare('auth_queue', false, true, false, false);
 try {
     $pdo = new PDO("mysql:host=localhost;dbname=GC_USERS_DB", "root", "password");
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
     echo "Server: Connected to Database.\n";
 } catch (PDOException $e) {
+
     die("Server: Could not connect to DB. " . $e->getMessage());
 }
 
 echo "Server: Waiting for requests...\n";
 
-// ── Helper: verify session_key belongs to the given username ──────────────────
+
 function verifySession(PDO $pdo, string $username, string $sessionKey): bool {
     $stmt = $pdo->prepare("
         SELECT s.id
@@ -44,26 +46,28 @@ function verifySession(PDO $pdo, string $username, string $sessionKey): bool {
         WHERE u.username = ? AND s.session_key = ?
     ");
     $stmt->execute([$username, $sessionKey]);
+
     return (bool) $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
-// Message call backs
+
 $callback = function (AMQPMessage $msg) use ($pdo, $channel) {
     echo "Server: Received Request.\n";
 
-    $data     = json_decode($msg->body, true);
+    $data = json_decode($msg->body, true);
     $response = [];
 
     // Login logic
     if ($data['type'] === 'login') {
         echo "Server: Processing Login for " . $data['username'] . "\n";
 
-        $stmt = $pdo->prepare("SELECT id, username, password_hash FROM users WHERE username = ?");
+        $stmt = $pdo->prepare("SELECT id, username, password_hash FROM users WHERE username = ?");// query from the database to find user
+
         $stmt->execute([$data['username']]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($user && password_verify($data['password'], $user['password_hash'])) {
-            echo "Server: Password Verified. Logging in.\n";
+            echo "Server: Password Verified, logging the user in.\n";
 
             $session_key = bin2hex(random_bytes(32));
 
@@ -71,19 +75,23 @@ $callback = function (AMQPMessage $msg) use ($pdo, $channel) {
             $stmt->execute([$user['id'], $session_key]);
 
             $response = [
-                'status'      => 'true',
+
+                'status' => 'true',
                 'session_key' => $session_key,
+
             ];
         } else {
             echo "Server: Verification Failed.\n";
             $response = [
-                'status'  => 'false',
+
+                'status' => 'false',
                 'message' => 'Invalid credentials',
+
             ];
         }
 
-    // Registration logic
-    } elseif ($data['type'] === 'register') {
+    
+    } elseif ($data['type'] === 'register') {// registration logic/case
         echo "Server: Processing Registration for " . $data['username'] . "\n";
 
         $hash = password_hash($data['password'], PASSWORD_DEFAULT);
@@ -91,33 +99,40 @@ $callback = function (AMQPMessage $msg) use ($pdo, $channel) {
         try {
             $stmt = $pdo->prepare("INSERT INTO users (username, password_hash) VALUES (?, ?)");
             $stmt->execute([$data['username'], $hash]);
+
             $response = ['status' => 'success'];
             echo "Server: User Registered.\n";
-        } catch (Exception $e) {
+        } catch (Exception $e) { // if user exists return error message
+
             $response = ['status' => 'failure', 'message' => 'User already exists'];
             echo "Server: Registration Failed (User exists).\n";
+
         }
 
-    // validation session logic 
+    
     } elseif ($data['type'] === 'validate_session') {
         echo "Server: Validating session for " . $data['username'] . "\n";
 
         if (verifySession($pdo, $data['username'], $data['session_key'])) {
+
             echo "Server: Session is valid.\n";
             $response = ['status' => 'success'];
+
         } else {
+
             echo "Server: Session is INVALID or spoofed.\n";
             $response = ['status' => 'failure'];
         }
 
-    // Save booking logic 
     } elseif ($data['type'] === 'save_booking') {
         echo "Server: Processing booking for " . $data['username'] . "\n";
 
         // Always re-verify the session before writing anything to the DB and causing issues
         if (!verifySession($pdo, $data['username'], $data['session_key'])) {
+
             echo "Server: Booking rejected — invalid session.\n";
             $response = ['status' => 'failure', 'message' => 'Invalid session'];
+
         } else {
             
             $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
@@ -135,11 +150,12 @@ $callback = function (AMQPMessage $msg) use ($pdo, $channel) {
                     WHERE user_id = ? AND event_title = ?
                     LIMIT 1
                 ");
+
                 $stmt->execute([$userId, $data['event_title']]);
                 $existing = $stmt->fetch(PDO::FETCH_ASSOC);
 
                 if ($existing) {
-                    echo "Server: Duplicate booking detected.\n";
+                    echo "Server: Booking already made \n";
                     $response = ['status' => 'duplicate', 'message' => 'Event already saved'];
                 } else {
                     try {
@@ -152,43 +168,47 @@ $callback = function (AMQPMessage $msg) use ($pdo, $channel) {
                         ");
                         $stmt->execute([
                             $userId,
-                            $data['event_title']       ?? '',
-                            $data['event_description'] ?? '',
-                            $data['event_date']        ?? '',
-                            $data['event_address']     ?? '',
-                            $data['event_url']         ?? '',
-                            $data['event_thumbnail']   ?? '',
-                            $data['venue_name']        ?? '',
+                            $data['event_title'],
+                            $data['event_description'],
+                            $data['event_date'],
+                            $data['event_address'],
+                            $data['event_url'],
+                            $data['event_thumbnail'],
+                            $data['venue_name'],
                             time(), 
                         ]);
                         echo "Server: Booking saved successfully.\n";
                         $response = ['status' => 'success'];
                     } catch (PDOException $e) {
+
                         echo "Server: Booking insert failed — " . $e->getMessage() . "\n";
                         $response = ['status' => 'failure', 'message' => 'Database error'];
+
                     }
                 }
             }
         }
 
-    // Get's bookings logic from database 
+    // Get's bookings logic from database still needs some work
     } elseif ($data['type'] === 'get_bookings') {
         echo "Server: Fetching bookings for " . $data['username'] . "\n";
-
         if (!verifySession($pdo, $data['username'], $data['session_key'])) {
-            echo "Server: get_bookings rejected — invalid session.\n";
-            $response = ['status' => 'failure', 'message' => 'Invalid session'];
+            echo "Server: get_bookings query rejected, invalid session.\n";
+            $response = ['status' => 'failure', 'message' => 'Invalid session, Please Log in '];
         } else {
             $stmt = $pdo->prepare("
                 SELECT b.id, b.event_title, b.event_description,
                        b.event_date, b.event_address, b.event_url,
                        b.event_thumbnail, b.venue_name,
                        b.booked_at
+
                 FROM bookings b
                 JOIN users u ON b.user_id = u.id
+
                 WHERE u.username = ?
                 ORDER BY b.booked_at DESC
             ");
+            
             $stmt->execute([$data['username']]);
             $bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -205,7 +225,7 @@ $callback = function (AMQPMessage $msg) use ($pdo, $channel) {
         $response = ['status' => 'failure', 'message' => 'Unknown request type'];
     }
 
-    // sends the rpelay back to teh queue
+    // sends the replay back to teh queue
     $reply = new AMQPMessage(
         json_encode($response),
         ['correlation_id' => $msg->get('correlation_id')]

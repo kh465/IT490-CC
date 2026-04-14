@@ -19,7 +19,6 @@ require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 require_once('host.ini');
 
-// --- Auth ---
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
     exit();
@@ -60,12 +59,12 @@ function getAmadeusToken(): string {
     $ch = curl_init(AMADEUS_BASE_URL . '/v1/security/oauth2/token');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
 
-    'grant_type'    => 'client_credentials',
-    'client_id'     => AMADEUS_CLIENT_ID,
+    'grant_type' => 'client_credentials',
+    'client_id' => AMADEUS_CLIENT_ID,
     'client_secret' => AMADEUS_CLIENT_SECRET,
     ]));
 
@@ -120,14 +119,14 @@ try {
     $token = getAmadeusToken();
 
     $params = http_build_query([
-        'latitude'  => round($lat, 6),
+        'latitude' => round($lat, 6),
         'longitude' => round($lng, 6),
-        'radius'    => 20,
+        'radius' => 20,
     ]);
 
     $ch = curl_init(AMADEUS_BASE_URL . '/v1/shopping/activities?' . $params);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 12);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 15); // the api sometimes hangs so this is long enoguh for no error messages 
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
 
@@ -151,24 +150,29 @@ try {
         $allActivities = $data['data'] ?? [];
 
         if (empty($allActivities)) {
-            $fetchError  = "No activities or destinations found near your location.";
+            $fetchError = "No activities or destinations found near your location.";
         } else {
             $queryLower = strtolower($query);
 
-            $filtered = array_filter($allActivities, function ($activity) use ($queryLower) {
+        foreach($allActivities as $act) {
+            $searchable = strtolower(
+            ($act['name']) . ' ' .
+            ($act['shortDescription']) . ' ' .
+            implode(' ', (array)($act['categories'] ?? []))
+        );
+            if(strpos($searchable, $queryLower) !== false) {
+                $filtered[] = $act;
+            }
+    }
 
-                $searchableText  = strtolower(implode(' ', [
-                    $activity['name']  ?? '',
-                    $activity['shortDescription'] ?? '',
-                    implode(' ', $activity['categories'] ?? []),
-                ]));
+        $pool = !empty($filtered) ? $filtered : $allActivities;
 
-                return str_contains($searchableText, $queryLower);
-            });
-
-            $pool = !empty($filtered) ? $filtered : $allActivities;
-            $results = array_slice(array_values($pool), 0, 3);
-
+        $count = 0;
+        foreach($pool as $item) {
+        if($count >= 3) break;
+        $results[] = $item;
+        $count++;
+        }
             if (empty($results)) {
                 $fetchError = "No activities found for <strong>" . htmlspecialchars($query) . "</strong> near your location.";
             }
@@ -191,33 +195,29 @@ function amadeusPrice(array $activity): string {
     return "$currency $amount";
 }
 
-function formatDuration(?string $iso): string {
+function formatDuration($iso): string {
     if (!$iso) return '';
     
-    $hours = 0;
-    $minutes = 0;
-    
-    // takes out hours if present if not move to minutes
-    $hourPos = strpos($iso, 'H');
+    $time_part = explode('T', $iso)[1];
 
-    if ($hourPos !== false) {
-      	  $hours = (int) substr($iso, strpos($iso, 'T') + 1, $hourPos - strpos($iso, 'T') - 1);
+    if(strpos($time_part, 'H') !== false) {
+        $hours = (int)explode('H', $time_part)[0];
+
+        $after_h = explode('H', $time_part)[1];
+
+    } else {
+        $after_h = $time_part;
     }
-    
-    // if there are no hours then minutes are assumed to exist and are taken out
-    $minPos = strpos($iso, 'M');
-    if ($minPos !== false) {
 
-      	  $start = $hourPos !== false ? $hourPos + 1 : strpos($iso, 'T') + 1;
-        	    $minutes = (int) substr($iso, $start, $minPos - $start);
+    if(strpos($after_h, 'M') !== false) {
+        $minutes = (int)explode('M', $after_h)[0];
+    }   
 
-    }
-    
-    if ($hours && $minutes) return "{$hours}h {$minutes}m";
+    if(!empty($hours) && !empty($minutes)) return "{$hours}h {$minutes}m";
 
-    if ($hours) return "{$hours}h";
+    if(!empty($hours))   return "{$hours}h";
+    if(!empty($minutes)) return "{$minutes}m";
 
-    if ($minutes) return "{$minutes}m";
     return '';
 
 }
@@ -258,7 +258,7 @@ function amadeusRatingStars(string $rating): string {
                 <input type ="text"
                        name="query"
                        value ="<?php echo htmlspecialchars($query); ?>"
-                       placeholder="Search activities near you..."
+                       placeholder="Search activities and events near you..."
                        required
                        style ="padding: 8px; width: 60%; max-width: 400px;">
                 <input type ="hidden" name="lat" value="<?php echo htmlspecialchars($lat); ?>">
@@ -290,21 +290,25 @@ function amadeusRatingStars(string $rating): string {
             <p>Showing <strong><?php echo count($results); ?></strong> result<?php echo count($results) !== 1 ? 's' : ''; ?></p>
 
             <?php foreach ($results as $activity):
-                $actId = $activity['id']             ?? '';
+                $actId = $activity['id'];
                 $name    = htmlspecialchars($activity['name'] ?? 'Unnamed Activity');
-                $shortDesc = htmlspecialchars($activity['shortDescription'] ?? '');
-                $rating = $activity['rating']         ?? null;
-                $duration = formatDuration($activity['minimumDuration'] ?? null);
-                $priceStr  = amadeusPrice($activity);
-                $cats = $activity['categories']     ?? [];
-                $pictures = $activity['pictures']       ?? [];
-                $thumb = !empty($pictures) ? htmlspecialchars($pictures[0]) : '';
 
+                $shortDesc = htmlspecialchars($activity['shortDescription']);
+                $rating = $activity['rating'];
+
+                $duration = formatDuration($activity['minimumDuration']);
+                $priceStr  = amadeusPrice($activity);
+
+                $cats = isset($activity['categories']) ? (array)$activity['categories'] : [];
+                $pictures = $activity['pictures'];
+
+                $thumb = !empty($pictures) ? htmlspecialchars($pictures[0]) : '';
                 $detailUrl = "event_detail.php"
                     . "?act_id=" . urlencode($actId)
-                    . "&lat="    . urlencode($lat)
-                    . "&lng="    . urlencode($lng);
+                    . "&lat=" . urlencode($lat)
+                    . "&lng=" . urlencode($lng);
             ?>
+            
             <div style="margin-bottom: 30px; border-bottom: 1px solid #ccc; padding-bottom: 20px;">
 
                 <?php if ($thumb): ?>
@@ -313,6 +317,7 @@ function amadeusRatingStars(string $rating): string {
                          style="width: 100%; max-width: 400px; height: auto; display: block; margin-bottom: 10px;"
                          onerror="this.style.display='none'; this.nextSibling.style.display='block';">
                     <p style="display:none;">[no image]</p>
+
                 <?php else: ?>
                     <p>[no image]</p>
                 <?php endif; ?>
@@ -328,12 +333,15 @@ function amadeusRatingStars(string $rating): string {
                 <?php endif; ?>
 
                 <ul style = "list-style: none; padding: 0; margin: 8px 0;">
+
                     <?php if ($rating !== null): ?>
                         <li><strong>Rating:</strong> <?php echo amadeusRatingStars((string)$rating); ?> <?php echo htmlspecialchars($rating); ?>/5</li>
                     <?php endif; ?>
+                    
                     <?php if ($duration): ?>
                         <li><strong>Duration:</strong> <?php echo htmlspecialchars($duration); ?></li>
                     <?php endif; ?>
+
                     <?php if ($priceStr): ?>
                         <li><strong>Price:</strong> From <?php echo htmlspecialchars($priceStr); ?></li>
                     <?php endif; ?>

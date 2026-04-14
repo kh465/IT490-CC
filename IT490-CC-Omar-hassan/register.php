@@ -18,10 +18,11 @@ if (isset($_POST['register'])) {
 
     $username = trim($_POST['username']);
     $password = trim($_POST['password']);
+
     $confirm_password = trim($_POST['confirm_password']);
 
     if (empty($username) || empty($password) || empty($confirm_password)) {
-        $error = "Please fill in all fields.";
+        $error = "Please fill in all fields."; // checks if user left any fields empty
     }
     elseif ($password !== $confirm_password) {
         $error = "Passwords do not match.";
