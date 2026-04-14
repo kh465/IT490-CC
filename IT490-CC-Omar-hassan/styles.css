@@ -148,3 +148,20 @@ nav li a {
 nav li a:hover {
     color: lightskyblue;
 }
+
+
+
+.rating-stars {
+    display: inline-block;
+    font-size: 24px;
+    cursor: pointer;
+    color: #ccc; 
+}
+
+.rating-stars .star {
+    transition: color 0.2s;
+}
+
+.star-yellow {
+    color: #FFD700;
+}

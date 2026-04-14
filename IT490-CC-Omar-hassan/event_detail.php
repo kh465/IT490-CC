@@ -197,14 +197,11 @@ if (!empty($activity) && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['
 
         $response = $client->send_request($request);
 
-        if ($response && $response['status'] === 'success') {
+        if ($response) {
             $bookingSuccess = true;
         } 
-        elseif ($response && $response['status'] === 'duplicate') {
-            $alreadyBooked = true;
-        } 
         else {
-            $bookingError = $response['message'] ?? "Error: Save failed.";
+            $bookingError = $response['message'] ?? "Error, event already booked or unavailiable";
         }
 
     } catch (Exception $e) {
