@@ -43,14 +43,13 @@ publishDeployEvent('set_status', [
 
 echo "$release approved and live.\n";
 
-// If on QA, promote to prod
-// only runs if we're approving on qa, pushes it to prod server
+//promote to prod (if on qa)
 if ($env === 'qa') {
 $prodHost = '100.70.7.44';
 $prodUser = 'omar-hassan';
 $tarball = "/tmp/{$release}.tar.gz";
 
-// zip up the release folder so we can send it over 
+//tarball so we can send it over 
 exec("tar -czf " . escapeshellarg($tarball) .
 " -C " . escapeshellarg("$baseDir/releases") .
 " " . escapeshellarg($release) . " 2>&1", $tOut, $tRet);
