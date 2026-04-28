@@ -13,6 +13,9 @@ if (!isset($_SESSION['username'])) {
 $bookings = [];
 $err = '';
 
+$rabbitmq_down = false;
+ini_set('default_socket_timeout', 5);
+
 try {
     $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
 
@@ -31,7 +34,7 @@ try {
         $err = $response['message'] ?? "You haven't booked any activities yet";
     }
 } catch (Exception $e) {
-    $err = "Error: Booking server is currently unreachable.";
+    $rabbitmq_down = true; 
 }
 ?>
 
@@ -41,6 +44,7 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Bookings – Hotel HotSpot</title>
+    <link rel = "stylesheet" type = "text/css" href = "styles.css">
     <style>
         .booking-card {
             border: 1px solid #ddd;
@@ -69,7 +73,9 @@ try {
     <div class = "main-container">
         <h1>My Saved Bookings</h1>
 
-        <?php if ($err): ?>
+        <?php if ($rabbitmq_down): ?>
+        <p style="color:red; font-weight:bold;">Our booking service is currently having some issues, please refresh</p>
+        <?php elseif ($err): ?>
             <p style = "color: orange; font-weight: bold;"><?php echo htmlspecialchars($err); ?></p>
             <p><a href ="search_results.php">Back to search results</a></p>
         <?php elseif (empty($bookings)): ?>
@@ -109,7 +115,7 @@ try {
                     </ul>
 
                     <?php if ($desc): ?>
-                        <p stlye ="font-size:0.9em; color:#555;"><?php echo substr($desc, 0, 150) . '...'; ?></p>
+                        <p style ="font-size:0.9em; color:#555;"><?php echo substr($desc, 0, 150) . '...'; ?></p>
                     <?php endif; ?>
 
                     <?php if ($url): ?>
