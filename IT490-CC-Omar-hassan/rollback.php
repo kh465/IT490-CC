@@ -5,7 +5,7 @@ $target = $argv[1] ?? null;
 $by = $argv[2] ?? trim(shell_exec('whoami'));
 $reason = $argv[3] ?? 'manual rollback via CLI';
 
-$baseDir = '/var/www/app';
+$baseDir = '/var/www/sample';
 $env = 'production';
 
 
@@ -26,6 +26,13 @@ if (!is_dir($path)) {
 }
 
 exec("ln -sfn " . escapeshellarg($path) . " " . escapeshellarg("$baseDir/current"));
+
+exec("sudo systemctl reload php8.2-fpm", $out, $exitCode);
+if ($exitCode !== 0) {
+    fwrite(STDERR, "Symlink has swapped buhowever the PHP-FPM reload failed.System will serve old code.\n");
+    fwrite(STDERR, "Run this command to fix it:  sudo systemctl reload php8.2-fpm\n");
+    exit(3);
+}
 
 try {
     publishDeployEvent('log_rollback', [
