@@ -4,6 +4,7 @@ require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 require_once('login.php.inc');
+require_once __DIR__ . ('/logging/logger.php');
 
 
 function doBooking ($user_id, $booking_type)
@@ -12,9 +13,11 @@ $con = mysqli_connect("127.0.0.1", "keven", "12345", "GC_USERS_DB");
 // Check connection
 if (mysqli_connect_errno()){
 	echo "Failed to connect to MYSqL: " . mysqli_connect_error();
+	sendRemoteLog("Failed to connect to mySQL: " . mysqli_connect_error(), "FAIL");
 	exit();
 }
-   else{
+   else {
+	sendRemoteLog("Successful mySQL connection!", "INFO");
    	echo "Successfully connected to mysql database";
 
 }
@@ -33,10 +36,12 @@ $con = mysqli_connect("127.0.0.1", "keven", "12345", "GC_USERS_DB");
 // Check connection
 if (mysqli_connect_errno()) {
 	echo "Failed to connect to MYSqL: " . mysqli_connect_error();
+	sendRemoteLog("Failed to connect to mySQL: " . mysqli_connect_error(), "FAIL");
 	exit(); 
 }
-  else{
+  else {
 	echo "Succesfully connected to mysql database";
+	sendRemoteLog("Successful mySQL connection!", "INFO");
 }
   
 $stmt = $con-> prepare("SELECT id FROM users WHERE id = ?");
@@ -46,6 +51,7 @@ $result = $stmt->get_result();
 
 if ($row = $result->fetch_assoc()) {
 	echo  "\nUser already exists!";
+	sendRemoteLog("User already exists!", "WARN");
 	return false;
 }
 
@@ -54,9 +60,11 @@ $stmt->bind_param("ss", $username, $password);
 
 if ($stmt->execute()) {
 	echo "\nregistered!";
+	sendRemoteLog("User registered!", "INFO");
 	return true;
 } else  {
 	echo "\nregistration failed!" ;
+	sendRemoteLog("Registration failed!", "WARN");
 	return false;
 }
 }
@@ -68,10 +76,12 @@ $con = mysqli_connect("127.0.0.1", "keven" ,"12345", "GC_USERS_DB");
 // Check connection
 if (mysqli_connect_errno()) {
    echo "Failed to connect to MYSqL: " . mysqli_connect_error();
+   sendRemoteLog("Failed to connect to mySQL: " . mysqli_connect_error(), "FAIL");
    exit();
 }
 else {
    echo "Successfully connected to mysql database";
+   sendRemoteLog("Successful mySQL connection!", "INFO");
 }
 
 $stmt = $con->prepare("SELECT password_hash FROM users WHERE id = ?");
@@ -81,6 +91,7 @@ $result = $stmt->get_result();
 
 if($result->num_rows == 0) {
 	echo "\nno user";
+	sendRemoteLog("No user?", "WARN");
 	return false;
 }
 
