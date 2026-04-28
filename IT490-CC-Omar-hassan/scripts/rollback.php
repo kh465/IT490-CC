@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/mq.php';
+require_once __DIR__ . 'rmqhelper.php';
 
 $target = $argv[1] ?? null;
 $by = $argv[2] ?? trim(shell_exec('whoami'));
