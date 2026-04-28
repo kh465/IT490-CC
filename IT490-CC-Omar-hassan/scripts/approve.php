@@ -20,22 +20,19 @@ if (!is_dir($path)) {
       fwrite(STDERR, "Release not found: $release\n");
       exit(1); }
 
-// Swap live symlink (atomic)
-// point current to the new release folder
+//swap to current
 exec("ln -sfn " . escapeshellarg($path) . " " . escapeshellarg("$baseDir/current"));
 
-// keep track of what was last approved
+//track approvals
 file_put_contents("$baseDir/last_approved.txt", $release);
 
-// Clear pending pointer
-// if this release is pending, remove the pointer since it is live now
+//remove pending pointer
 $pending = @readlink("$baseDir/pending");
 if ($pending === $path) {
      @unlink("$baseDir/pending");
 }
 
-// Publish approval event
-// send a message to the queue so other scripts know this got approved
+//publish to rmq and others
 publishDeployEvent('set_status', [
     'release' => $release,
     'environment' => $env,
