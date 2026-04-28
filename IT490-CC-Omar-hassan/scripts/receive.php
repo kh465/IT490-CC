@@ -1,6 +1,6 @@
 #!/usr/bin/php
 <?php
-require_once __DIR__ . "/rmqhelper.php";
+require_once __DIR__ . '/rmqhelper.php';
 
 $release = $argv[1] ?? null;
 $commit = $argv[2] ?? '';
