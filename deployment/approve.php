@@ -8,7 +8,7 @@ $by = $argv[3] ?? trim(shell_exec('whoami'));
 $notes = $argv[4] ?? null;
 
 if (!$release || !$env) {
-    fwrite(STDERR, "Usage: php approve.php <release> [by] [notes]\n");
+    fwrite(STDERR, "Usage: php approve.php <release> <env> [by] [notes]\n");
     exit(1);
 }
 
@@ -26,10 +26,10 @@ exec("ln -sfn " . escapeshellarg($path) . " " . escapeshellarg("$baseDir/current
 // keep track of what was last approved
 file_put_contents("$baseDir/last_approved.txt", $release);
 
-//  Clear pending pointer
+// Clear pending pointer
 // if this release is pending, remove the pointer since it is live now
 $pending = @readlink("$baseDir/pending");
-if ($pending === $path)
+if ($pending === $path) {
      @unlink("$baseDir/pending");
 }
 
@@ -66,10 +66,10 @@ exec("rsync -az " . escapeshellarg($tarball) .
 
 if ($rRet !== 0) { echo "WARNING: rsync to prod failed\n"; exit(0); }
 $commit = trim(shell_exec("cd " . escapeshellarg($path) . " && git rev-parse HEAD 2>/dev/null")) ?: '';
-exec("ssh {$prodUser}@{$prodHost} 'php /var/www/app/scripts/receive.php " .
-escapeshellarg($release) . " " . escapeshellarg($commit) . "' 2>&1",
-$sOut);
+exec("ssh {$prodUser}@{$prodHost} 'php /var/www/sample/scripts/receive.php " .
+escapeshellarg($release) . " " . escapeshellarg($commit) . "' 2>&1", $sOut);
 
 echo "Prod staging: " . implode("\n", $sOut) . "\n";
 
 unlink($tarball);
+}
