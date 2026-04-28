@@ -1,6 +1,6 @@
 #!/usr/bin/php
 <?php
-require_once __DIR__ '/rmqhelper.php';
+require_once __DIR__ . '/rmqhelper.php';
 
 $release = $argv[1] ?? null;
 $commit = $argv[2] ?? '';
@@ -17,7 +17,7 @@ $relPath = "$siteDir/releases/$release";
 
 exec("tar -xzf " . escapeshellarg($tarball) . " -C " . escapeshellarg("$siteDir/releases") . " 2>&1", $out, $ret);
 if($ret !==0) {
-	fwrite(STDERR, "failed to unpack!\n"
+	fwrite(STDERR, "failed to unpack!\n");
 	exit(1);
 }
 unlink($tarball);

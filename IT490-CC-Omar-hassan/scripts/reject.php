@@ -12,12 +12,12 @@ if(!$release) {
 	exit(1);
 }
 
-$baseDir = 'var/www/sample';
+$baseDir = '/var/www/sample';
 $path = "$baseDir/releases/$release";
 
 $pending = @readlink("$baseDir/pending");
 if ($pending === $path)
-	unlink@("$baseDir/pending");
+	@unlink("$baseDir/pending");
 
 publishDeployEvent('set_status', ['release' => $release,
 	'status' => 'rejected',

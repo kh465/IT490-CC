@@ -7,7 +7,7 @@ $releaseDate = date('Ymd_Hi');
 echo "releaseDate: $releaseDate\n";
 $newRelease = trim("$baseDir/releases/$releaseDate");
 echo "newRelease: $newRelease\n";
-#qaVM = 'insert qa vm';
+$qaVM = '100.103.112.3';
 $qaUser = 'www-data';
 
 #get the dev branch from github
