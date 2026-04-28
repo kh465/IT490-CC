@@ -8,7 +8,7 @@ echo "releaseDate: $releaseDate\n";
 $newRelease = trim("$baseDir/releases/$releaseDate");
 echo "newRelease: $newRelease\n";
 $qaVM = '100.103.112.3';
-$qaUser = 'www-data';
+$qaUser = 'omar-hassan';
 
 #get the dev branch from github
 exec("git clone -b in_dev https://github.com/kh465/IT490-CC.git " . 
@@ -40,8 +40,8 @@ publishDeployEvent('log_deploy', [
 echo "pushed dev, live on $releaseDate\n";
 
 #package and send over to qa vm
-$tarball = "tmp/{$releaseDate}.tar.gz";
-exec("tar -czf " . escapeshellarg($tarball) . " -C " . escapeshellarg("$baseDir/release") .
+$tarball = "/tmp/{$releaseDate}.tar.gz";
+exec("tar -czf " . escapeshellarg($tarball) . " -C " . escapeshellarg("$baseDir/releases") .
 	" " . escapeshellarg($releaseDate) . " 2>&1", $tOut, $tRet);
 if ($tRet !== 0) {
 	echo "failed to tarball! qa unchanged\n";
@@ -54,6 +54,6 @@ if ($rRet !== 0) {
 }
 
 exec("ssh {$qaUser}@{$qaVM} 'php /var/www/sample/scripts/receive.php " .
-	escapeshellarg($release) . " " . escapeshellarg($commit) . "' 2>&1", $sOut);
+	escapeshellarg($releaseDate) . " " . escapeshellarg($commit) . "' 2>&1", $sOut);
 echo "qa staged: " . implode("\n", $sOut) . "\n";
 unlink($tarball);

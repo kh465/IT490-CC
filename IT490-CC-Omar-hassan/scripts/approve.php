@@ -48,8 +48,8 @@ echo "$release approved and live.\n";
 // If on QA, promote to prod
 // only runs if we're approving on qa, pushes it to prod server
 if ($env === 'qa') {
-$prodHost = '100.80.61.121';
-$prodUser = 'xaviersylvers';
+$prodHost = '100.70.7.44';
+$prodUser = 'omar-hassan';
 $tarball = "/tmp/{$release}.tar.gz";
 
 // zip up the release folder so we can send it over 
