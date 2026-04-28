@@ -5,10 +5,14 @@ require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 require_once('host.ini');
 
+
 $err = '';
 $successmes = '';
 $bookings = [];
 $reviews = [];
+
+$rabbitmq_down = false;
+ini_set('default_socket_timeout', 5);
 
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
@@ -20,13 +24,12 @@ $client = null;
 try {
     $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
 } catch (Exception $e) {
-    $err = "Error: Could not connect to the server.";
+    $rabbitmq_down = true; 
 }
 
-/*
 if ($client) {
 
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_review'])) {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_review'])) { 
         $eventName = $_POST['event_name'];
         $rating = (int)$_POST['rating'];
         $ratingDes = $_POST['description'];
@@ -45,16 +48,20 @@ if ($client) {
                 'review_text' => $ratingDes,
             ];
 
-            $response = $client->send_request($request);
+            try {
+                $response = $client->send_request($request);
+                if (isset($response['status'])) {
+                    $successmes = "Review has been saved for: " . htmlspecialchars($eventName);
+                } else {
 
-
-            if (isset($response['status'])) {
-                $successmes = "Review has been saved for: " . htmlspecialchars($eventName);
-            } else {
-                $err = $response['message'] ?? "Could not save review.";
-            }
-        }
+                    $err = $response['message'] ?? "Could not save review.";
+                }
+                } catch (Exception $e) {
+                    $rabbitmq_down = true;
+                 }
     }
+
+    try {
 
     $request = [
         'type' => 'get_booking',
@@ -67,26 +74,38 @@ if ($client) {
     if (isset($response['status'])) {
         $bookings = $response['bookings'];
     } else {
-        $err = $response['message'] ?? "No bookings found.";
+        $err = $response['message'] ?? "Error: No bookings found.";
     }
 
+} catch (Exception $e) {
+    $rabbitmq_down = true;
+}
+
+try {
+
     $request = [
-        'type'  => 'get_reviews',
+        'type' => 'get_reviews',
         'username' => $_SESSION['username'],
         'session_key' => $_SESSION['session_key'],
     ];
 
-    $response = $client->send_request($request);
-
-    if (isset($response['status'])) {
-        $reviews = $response['reviews'];
-    }
+        $response = $client->send_request($request);
+         if (isset($response['status'])) {
+            $reviews = $response['reviews'];
+        }
+    } 
+    catch (Exception $e) {
+    $rabbitmq_down = true;
 }
-*/
+
+    }
+} 
+
 
 function renderStars($rating) {
     $rating = (int)$rating;
     $stars = '';
+    
     for ($i = 1; $i <= 5; $i++) {
         if ($i <= $rating) {
             $stars .= '&#9733;';
@@ -105,6 +124,7 @@ function renderStars($rating) {
     <meta charset="UTF-8">
     <meta name = "viewport" content ="width=device-width, initial-scale=1.0">
     <title>Review Bookings – Hotel HotSpot</title>
+    <link rel = "stylesheet" type = "text/css" href = "styles.css">
     <style>
         .star-row {
             display: inline-block;
@@ -133,7 +153,7 @@ function renderStars($rating) {
 </nav>
 
 <div class= "main-container">
-    <h1>Review Your Bookings</h1>
+    <h1>Review and Rate Your Bookings</h1>
 
     <?php if ($err): ?>
         <p style = "color: red; font-weight: bold;"><?php echo htmlspecialchars($err); ?></p>
@@ -230,13 +250,18 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function fillStars(val) {
         for (let  s = 0; s < stars.length; s++) {
+        
             let starVal = stars[s].getAttribute("data-value");
             if (starVal <= val) {
+    
                 stars[s].innerHTML = '&#9733;';
                 stars[s].style.color = '#FFD700';
+
             } else {
+
                 stars[s].innerHTML = '&#9734;';
                 stars[s].style.color  = '#ccc';
+
             }
         }
     }
