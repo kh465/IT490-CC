@@ -20,22 +20,19 @@ if (!is_dir($path)) {
       fwrite(STDERR, "Release not found: $release\n");
       exit(1); }
 
-// Swap live symlink (atomic)
-// point current to the new release folder
+//swap to current
 exec("ln -sfn " . escapeshellarg($path) . " " . escapeshellarg("$baseDir/current"));
 
-// keep track of what was last approved
+//track approvals
 file_put_contents("$baseDir/last_approved.txt", $release);
 
-// Clear pending pointer
-// if this release is pending, remove the pointer since it is live now
+//remove pending pointer
 $pending = @readlink("$baseDir/pending");
 if ($pending === $path) {
      @unlink("$baseDir/pending");
 }
 
-// Publish approval event
-// send a message to the queue so other scripts know this got approved
+//publish to rmq and others
 publishDeployEvent('set_status', [
     'release' => $release,
     'environment' => $env,
@@ -46,14 +43,13 @@ publishDeployEvent('set_status', [
 
 echo "$release approved and live.\n";
 
-// If on QA, promote to prod
-// only runs if we're approving on qa, pushes it to prod server
+//promote to prod (if on qa)
 if ($env === 'qa') {
 $prodHost = '100.70.7.44';
 $prodUser = 'omar-hassan';
 $tarball = "/tmp/{$release}.tar.gz";
 
-// zip up the release folder so we can send it over 
+//tarball so we can send it over 
 exec("tar -czf " . escapeshellarg($tarball) .
 " -C " . escapeshellarg("$baseDir/releases") .
 " " . escapeshellarg($release) . " 2>&1", $tOut, $tRet);
