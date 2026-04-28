@@ -56,6 +56,8 @@ exec("tar -czf " . escapeshellarg($tarball) .
 
 if ($tRet !== 0) {
   echo "WARNING: tarball failed — prod not updated\n"; exit(0);
+  echo "tar output: " . implode("\n", $tOut) . "\n";
+  exit(0);
 }
 
 exec("rsync -az " . escapeshellarg($tarball) .
