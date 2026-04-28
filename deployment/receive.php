@@ -4,6 +4,7 @@ require_once __DIR__ '/rmqhelper.php';
 
 $release = $argv[1] ?? null;
 $commit = $argv[2] ?? '';
+$env = $argv[3] ?? 'qa';
 
 if(!$release) {
 	fwrite(STDERR, "error! no release found!\n");
@@ -24,7 +25,7 @@ unlink($tarball);
 exec("ln -sfn " . escapeshellarg($relPath) . " " . escapeshellarg("$siteDir/pending"));
 
 publishDeployEvent('log_deploy', [
-	'env' => 'qa',
+	'env' => $env,
 	'release' => $release,
 	'commit' => $commit,
 	'status' => 'pending',
