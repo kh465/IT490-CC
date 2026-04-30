@@ -26,7 +26,7 @@ if ($ret !== 0) {
 }
 
 exec("git -C " . escapeshellarg($newRelease) . " sparse-checkout set IT490-CC-Omar-hassan 2>&1");
-exec("git -C " . escapeshellarg($newRelease) . " checkout 2&>1");
+exec("git -C " . escapeshellarg($newRelease) . " checkout 2>&1");
 
 $commit = trim(shell_exec("cd " . escapeshellarg($newRelease) . " && git rev-parse HEAD"));
 
@@ -45,7 +45,7 @@ echo "pushed dev, live on $releaseDate\n";
 #package and send over to qa vm
 $tarball = "/tmp/{$releaseDate}.tar.gz";
 $subfolderPath = "$newRelease/IT490-CC-Omar-hassan";
-exec("tar -czf " . escapeshellarg($tarball) . " -C " . escapeshellarg($subfolderPath) ." . 2>&1", $tOut, $tRet);
+exec("tar -czf " . escapeshellarg($tarball) . " -C " . escapeshellarg($subfolderPath) . " . 2>&1", $tOut, $tRet);
 if ($tRet !== 0) {
 	echo "failed to tarball! qa unchanged\n";
 	exit(0);
