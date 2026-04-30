@@ -77,7 +77,7 @@ if(isset($_POST['login'])) {
 
 
     <div class="login-container">
-        <h1>Login</h1>
+        <h1>we are here</h1>
 
         <form action = "login.php" method = "POST">
             <?php if($error): ?>
