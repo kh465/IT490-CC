@@ -14,7 +14,10 @@ $siteDir = '/var/www/sample';
 $tarball = "/tmp/{$release}.tar.gz";
 $relPath = "$siteDir/releases/$release";
 
-exec("tar -xzf " . escapeshellarg($tarball) . " -C " . escapeshellarg("$siteDir/releases") . " 2>&1", $out, $ret);
+//exec("tar -xzf " . escapeshellarg($tarball) . " -C " . escapeshellarg("$siteDir/releases") . " 2>&1", $out, $ret);
+if(!is_dir($relPath))
+	mkdir($relPath, 0755, true);
+exec("tar -xzf " . escapeshellarg($tarball) . " -C " . escapeshellarg($relPath) . " 2>&1", $out, $ret);
 if($ret !==0) {
 	fwrite(STDERR, "failed to unpack!\n");
 	exit(1);

@@ -27,6 +27,7 @@ if (!is_dir($path)) {
 
 exec("ln -sfn " . escapeshellarg($path) . " " . escapeshellarg("$baseDir/current"));
 
+
 try {
     publishDeployEvent('log_rollback', [
         'env' => $env,
