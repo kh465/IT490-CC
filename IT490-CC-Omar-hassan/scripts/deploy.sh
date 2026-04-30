@@ -27,7 +27,7 @@ if ($ret !== 0) {
 
 $commit = trim(shell_exec("cd " . escapeshellarg($newRelease) . " && git rev-parse HEAD"));
 
-exec("ln -sfn " . escapeshellarg($newRelease) . " " .
+exec("ln -sfn " . escapeshellarg($newRelease) . "/IT490-CC-Omar-hassan " .
 	escapeshellarg("$baseDir/current"));
 
 publishDeployEvent('log_deploy', [
