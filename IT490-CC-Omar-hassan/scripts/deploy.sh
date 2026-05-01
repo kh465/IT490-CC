@@ -11,7 +11,7 @@ $qaVM = '100.103.112.3';
 $qaUser = 'omar-hassan';
 
 #get the dev branch from github
-exec("git clone -b in_dev https://github.com/kh465/IT490-CC.git " . 
+exec("git clone --no-checkout -b in_dev https://github.com/kh465/IT490-CC.git " . 
 	escapeshellarg($newRelease) . " 2>&1", $out, $ret);
 if ($ret !== 0) {
 	publishDeployEvent('log_deploy', [
@@ -25,9 +25,12 @@ if ($ret !== 0) {
 	exit(1);
 }
 
+exec("git -C " . escapeshellarg($newRelease) . " sparse-checkout set IT490-CC-Omar-hassan 2>&1");
+exec("git -C " . escapeshellarg($newRelease) . " checkout 2>&1");
+
 $commit = trim(shell_exec("cd " . escapeshellarg($newRelease) . " && git rev-parse HEAD"));
 
-exec("ln -sfn " . escapeshellarg($newRelease) . " " .
+exec("ln -sfn " . escapeshellarg($newRelease) . "/IT490-CC-Omar-hassan " .
 	escapeshellarg("$baseDir/current"));
 
 publishDeployEvent('log_deploy', [
@@ -41,12 +44,13 @@ echo "pushed dev, live on $releaseDate\n";
 
 #package and send over to qa vm
 $tarball = "/tmp/{$releaseDate}.tar.gz";
-exec("tar -czf " . escapeshellarg($tarball) . " -C " . escapeshellarg("$baseDir/releases") .
-	" " . escapeshellarg($releaseDate) . " 2>&1", $tOut, $tRet);
+$subfolderPath = "$newRelease/IT490-CC-Omar-hassan";
+exec("tar -czf " . escapeshellarg($tarball) . " -C " . escapeshellarg($subfolderPath) . " . 2>&1", $tOut, $tRet);
 if ($tRet !== 0) {
 	echo "failed to tarball! qa unchanged\n";
 	exit(0);
 }
+
 exec("rsync -az " . escapeshellarg($tarball) . " {$qaUser}@{$qaVM}:/tmp/ 2>&1", $rOut, $rRet);
 if ($rRet !== 0) {
 	echo "rsync to qa failed!\n";

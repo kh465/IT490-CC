@@ -1,20 +1,19 @@
 <?php
-require_once __DIR__ . '/rmqhelper.php';
+require_once __DIR__ . '/mq.php';
 
 $target = $argv[1] ?? null;
-$env = $argv[2] ?? 'prod'; 
-$by = $argv[3] ?? trim(shell_exec('whoami'));
-$reason = $argv[4] ?? 'manual rollback via CLI';
+$by = $argv[2] ?? trim(shell_exec('whoami'));
+$reason = $argv[3] ?? 'manual rollback via CLI';
 
-
-$baseDir = '/var/www/sample';
+$baseDir = '/var/www/app';
+$env = 'production';
 
 
 if (!$target) {
     $lastApprovedFile = "$baseDir/last_approved.txt";
     if (!file_exists($lastApprovedFile)) {
-        fwrite(STDERR, "No last_approved.txt found. Please give a specific release name.\n");
-        fwrite(STDERR, "How to use: sudo ./rollback.php <release>  [env] [by] [reason]\n");
+        fwrite(STDERR, "No last_approved.txt found. Please give a  specific release name.\n");
+        fwrite(STDERR, "How to use: php rollback.php <release> [by] [reason]\n");
         exit(1);
     }
     $target = trim(file_get_contents($lastApprovedFile));
@@ -27,13 +26,6 @@ if (!is_dir($path)) {
 }
 
 exec("ln -sfn " . escapeshellarg($path) . " " . escapeshellarg("$baseDir/current"));
-
-exec("sudo systemctl reload php8.2-fpm", $out, $exitCode);
-if ($exitCode !== 0) {
-    fwrite(STDERR, "Symlink has swapped buhowever the PHP-FPM reload failed.System will serve old code.\n");
-    fwrite(STDERR, "Run this command to fix it:  sudo systemctl reload php8.2-fpm\n");
-    exit(3);
-}
 
 try {
     publishDeployEvent('log_rollback', [
