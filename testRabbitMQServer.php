@@ -113,6 +113,7 @@ if ($row = $result->fetch_assoc()) {
 	return false;
 }
 
+$password = password_hash($password, PASSWORD_DEFAULT);
 $stmt = $con->prepare("INSERT INTO users (id, password_hash) VALUES (?, ?)");
 $stmt->bind_param("ss", $username, $password);
 
@@ -154,20 +155,21 @@ if($result->num_rows == 0) {
 }
 
 
-
 if ($row = $result->fetch_assoc()) {
-	$dbpword = $row['password_hash'];
-	if ($dbpword == $password) {
+	$dbword = $row['password_hash'];
+	if (password_verify($password, $dbword)) {
 		echo "\ntrue!";
+                sendRemoteLog("Login successful for user: " . $username, "INFO");
 		return true;
-	}
-	
-		
-	else {
-		echo "\nfalse!";
-		return false;
+        } else { 
+                echo  "\nfalse!";
+                sendRemoteLog("Invalid password for user: " . $username, "WARN");
+                return false;
 	}
 }
+
+return false; // prevent any null bugs
+
     // lookup username in database
     // check password
     // $login = new loginDB();
