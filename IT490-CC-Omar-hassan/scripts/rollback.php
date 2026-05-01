@@ -1,19 +1,20 @@
 <?php
-require_once __DIR__ . 'rmqhelper.php';
+require_once __DIR__ . '/rmqhelper.php';
 
 $target = $argv[1] ?? null;
-$by = $argv[2] ?? trim(shell_exec('whoami'));
-$reason = $argv[3] ?? 'manual rollback via CLI';
+$env = $argv[2] ?? 'prod'; 
+$by = $argv[3] ?? trim(shell_exec('whoami'));
+$reason = $argv[4] ?? 'manual rollback via CLI';
+
 
 $baseDir = '/var/www/sample';
-$env = 'production';
 
 
 if (!$target) {
     $lastApprovedFile = "$baseDir/last_approved.txt";
     if (!file_exists($lastApprovedFile)) {
-        fwrite(STDERR, "No last_approved.txt found. Please give a  specific release name.\n");
-        fwrite(STDERR, "How to use: php rollback.php <release> [by] [reason]\n");
+        fwrite(STDERR, "No last_approved.txt found. Please give a specific release name.\n");
+        fwrite(STDERR, "How to use: sudo ./rollback.php <release>  [env] [by] [reason]\n");
         exit(1);
     }
     $target = trim(file_get_contents($lastApprovedFile));
