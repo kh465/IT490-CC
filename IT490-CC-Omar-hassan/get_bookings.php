@@ -61,6 +61,7 @@ try {
         <div class ="logo"> <a href = "index.php"> Hotel HotSpot</a></div>
         <ul>
             <li><a href = "index.php">Home</a></li>
+            li><a href= "review.php">Find your reviews</a></li>
             <?php if (isset($_SESSION['username'])): ?>
             <li>Logged in as: <strong> <?php echo htmlspecialchars($_SESSION['username']); ?> </strong></li>
             <li><a href= "logout.php">Logout</a></li>
