@@ -51,8 +51,7 @@ $tarball = "/tmp/{$release}.tar.gz";
 
 //tarball so we can send it over 
 exec("tar -czf " . escapeshellarg($tarball) .
-" -C " . escapeshellarg("$baseDir/releases") .
-" " . escapeshellarg($release) . " 2>&1", $tOut, $tRet);
+" -C " . escapeshellarg($path) . " . 2>&1", $tOut, $tRet);
 
 if ($tRet !== 0) {
   echo "WARNING: tarball failed — prod not updated\n"; exit(0);
