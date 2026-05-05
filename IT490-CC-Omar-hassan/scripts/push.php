@@ -13,7 +13,7 @@ $gitBranch = 'in_dev';
 
 echo "releaseDate: $releaseDate\n";
 
-#clone if repo is missing, reset if it does (ensures repo is up to date)
+
 if (!is_dir("$repoDir/.git")) {
     exec("git clone -b " . escapeshellarg($gitBranch) . " " . escapeshellarg($gitURL) . " " . escapeshellarg($repoDir) . " 2>&1", $out, $ret);
 } else {
