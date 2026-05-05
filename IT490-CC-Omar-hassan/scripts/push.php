@@ -52,8 +52,7 @@ publishDeployEvent('log_deploy', [
 ]);
 echo "dev live, commit $commit ($releaseDate)\n";
 
-# package CONTENTS only — note the trailing "." instead of the folder name.
-# this is the fix for the folder-in-folder bug downstream.
+#fix for the folder-in-folder bug downstream
 $tarball = "/tmp/{$releaseDate}.tar.gz";
 exec("tar -czf " . escapeshellarg($tarball) .
     " -C " . escapeshellarg($webDir) . " . 2>&1", $tOut, $tRet);
