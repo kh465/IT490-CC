@@ -8,7 +8,7 @@ $by = $argv[3] ?? trim(shell_exec('whoami'));
 $notes = $argv[4] ?? null;
 
 if (!$release || !$env) {
-    fwrite(STDERR, "Usage: php approve.php <release> <env> [by] [notes]\n");
+    fwrite(STDERR, "How to use: php approve.php <release> <env> [by] [notes]\n");
     exit(1);
 }
 
@@ -16,7 +16,7 @@ $baseDir = '/var/www/sample';
 $path = "$baseDir/releases/$release";
 
 if (!is_dir($path)) {
-    fwrite(STDERR, "Release not found: $release\n");
+    fwrite(STDERR, "This Release is not found: $release\n");
     exit(1);
 }
 
@@ -47,7 +47,7 @@ echo "$release approved and live on $env.\n";
 if ($env === 'qa') {
     $prodHost = '100.70.7.44';
     $prodUser = 'omar-hassan';
-    $tarball  = "/tmp/{$release}.tar.gz";
+    $tarball = "/tmp/{$release}.tar.gz";
 
     #fixes the folder-in-folder issue
     exec("tar -czf " . escapeshellarg($tarball) .
@@ -55,6 +55,7 @@ if ($env === 'qa') {
 
     if ($tRet !== 0) {
         echo "WARNING: tarball failed — prod not updated\n";
+
         echo "tar output: " . implode("\n", $tOut) . "\n";
         exit(0);
     }
@@ -64,6 +65,7 @@ if ($env === 'qa') {
 
     if ($rRet !== 0) {
         echo "WARNING: rsync to prod failed\n";
+
         echo "rsync output: " . implode("\n", $rOut) . "\n";
         @unlink($tarball);
         exit(0);

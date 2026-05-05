@@ -15,9 +15,11 @@ $siteDir = '/var/www/sample';
 $tarball = "/tmp/{$release}.tar.gz";
 $relPath = "$siteDir/releases/$release";
 
+#just in case releases dir doesn't exist
 if (!is_dir($relPath))
     mkdir($relPath, 0755, true);
 
+#unpack tarball into releases folder
 exec("tar -xzf " . escapeshellarg($tarball) . " -C " .
     escapeshellarg($relPath) . " 2>&1", $out, $ret);
 if ($ret !== 0) {

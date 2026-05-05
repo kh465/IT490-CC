@@ -13,7 +13,7 @@ $gitBranch = 'in_dev';
 
 echo "releaseDate: $releaseDate\n";
 
-
+#checks for git directory. if it doesn't exist, clone it. if it does, hard copy the repo to ensure it is current
 if (!is_dir("$repoDir/.git")) {
     exec("git clone -b " . escapeshellarg($gitBranch) . " " . escapeshellarg($gitURL) . " " . escapeshellarg($repoDir) . " 2>&1", $out, $ret);
 } else {
@@ -58,6 +58,7 @@ if ($tRet !== 0) {
     exit(0);
 }
 
+#rsync files over to qa to prepare files to run in receive.php
 exec("rsync -az " . escapeshellarg($tarball) .
     " {$qaUser}@{$qaVM}:/tmp/ 2>&1", $rOut, $rRet);
 if ($rRet !== 0) {
@@ -67,6 +68,7 @@ if ($rRet !== 0) {
     exit(0);
 }
 
+#ssh in and run receive.php
 exec("ssh {$qaUser}@{$qaVM} 'php /var/www/sample/scripts/receive.php " .
     escapeshellarg($releaseDate) . " " . escapeshellarg($commit) . " qa' 2>&1", $sOut);
 echo "qa staged: " . implode("\n", $sOut) . "\n";
