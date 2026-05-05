@@ -3,8 +3,8 @@
 require_once __DIR__ . '/rmqhelper.php';
 
 $target = $argv[1] ?? null;
-$env    = $argv[2] ?? 'prod';
-$by     = $argv[3] ?? trim(shell_exec('whoami'));
+$env = $argv[2] ?? 'prod';
+$by = $argv[3] ?? trim(shell_exec('whoami'));
 $reason = $argv[4] ?? 'manual rollback via CLI';
 
 $baseDir = '/var/www/sample';

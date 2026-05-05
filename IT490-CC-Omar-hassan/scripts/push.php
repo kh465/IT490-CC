@@ -2,25 +2,22 @@
 <?php
 require_once __DIR__ . '/rmqhelper.php';
 
-$baseDir     = '/var/www/sample';
-$repoDir     = "$baseDir/repo";
-$webDir	     = "$repoDir/IT490-CC-Omar-hassan";
+$baseDir = '/var/www/sample';
+$repoDir = "$baseDir/repo";
+$webDir	 = "$repoDir/IT490-CC-Omar-hassan";
 $releaseDate = date('Ymd_Hi');
-$qaVM        = '100.103.112.3';
-$qaUser      = 'omar-hassan';
-$gitURL      = 'https://github.com/kh465/IT490-CC.git';
-$gitBranch   = 'in_dev';
+$qaVM = '100.103.112.3';
+$qaUser = 'omar-hassan';
+$gitURL = 'https://github.com/kh465/IT490-CC.git';
+$gitBranch = 'in_dev';
 
 echo "releaseDate: $releaseDate\n";
 
 #clone if repo is missing, reset if it does (ensures repo is up to date)
 if (!is_dir("$repoDir/.git")) {
-    exec("git clone -b " . escapeshellarg($gitBranch) . " " .
-        escapeshellarg($gitURL) . " " . escapeshellarg($repoDir) . " 2>&1", $out, $ret);
+    exec("git clone -b " . escapeshellarg($gitBranch) . " " . escapeshellarg($gitURL) . " " . escapeshellarg($repoDir) . " 2>&1", $out, $ret);
 } else {
-    exec("cd " . escapeshellarg($repoDir) .
-        " && git fetch origin " . escapeshellarg($gitBranch) .
-        " && git reset --hard origin/" . escapeshellarg($gitBranch) . " 2>&1", $out, $ret);
+    exec("cd " . escapeshellarg($repoDir) . " && git fetch origin " . escapeshellarg($gitBranch) . " && git reset --hard origin/" . escapeshellarg($gitBranch) . " 2>&1", $out, $ret);
 }
 
 if ($ret !== 0) {
@@ -52,7 +49,6 @@ publishDeployEvent('log_deploy', [
 ]);
 echo "dev live, commit $commit ($releaseDate)\n";
 
-#fix for the folder-in-folder bug downstream
 $tarball = "/tmp/{$releaseDate}.tar.gz";
 exec("tar -czf " . escapeshellarg($tarball) .
     " -C " . escapeshellarg($webDir) . " . 2>&1", $tOut, $tRet);
