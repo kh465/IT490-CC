@@ -3,25 +3,24 @@
 require_once __DIR__ . '/rmqhelper.php';
 
 $release = $argv[1] ?? null;
-$env     = $argv[2] ?? null;
-$by      = $argv[3] ?? trim(shell_exec('whoami'));
-$notes   = $argv[4] ?? null;
+$env = $argv[2] ?? null;
+$by = $argv[3] ?? trim(shell_exec('whoami'));
+$notes = $argv[4] ?? null;
 
 if (!$release || !$env) {
-    fwrite(STDERR, "Usage: php approve.php <release> <env> [by] [notes]\n");
+    fwrite(STDERR, "How to use: php approve.php <release> <env> [by] [notes]\n");
     exit(1);
 }
 
 $baseDir = '/var/www/sample';
-$path    = "$baseDir/releases/$release";
+$path = "$baseDir/releases/$release";
 
 if (!is_dir($path)) {
-    fwrite(STDERR, "Release not found: $release\n");
+    fwrite(STDERR, "This Release is not found: $release\n");
     exit(1);
 }
 
-# update both current AND live. live is what apache serves, current is the
-# tracking pointer to the last-approved release (used by rollback/reject).
+# update current AND live
 exec("ln -sfn " . escapeshellarg($path) . " " . escapeshellarg("$baseDir/current"));
 exec("ln -sfn " . escapeshellarg($path) . " " . escapeshellarg("$baseDir/live"));
 
@@ -48,14 +47,15 @@ echo "$release approved and live on $env.\n";
 if ($env === 'qa') {
     $prodHost = '100.70.7.44';
     $prodUser = 'omar-hassan';
-    $tarball  = "/tmp/{$release}.tar.gz";
+    $tarball = "/tmp/{$release}.tar.gz";
 
-    #fixes the folder-in-folder issue on prod.
+    #fixes the folder-in-folder issue
     exec("tar -czf " . escapeshellarg($tarball) .
         " -C " . escapeshellarg($path) . " . 2>&1", $tOut, $tRet);
 
     if ($tRet !== 0) {
         echo "WARNING: tarball failed — prod not updated\n";
+
         echo "tar output: " . implode("\n", $tOut) . "\n";
         exit(0);
     }
@@ -65,6 +65,7 @@ if ($env === 'qa') {
 
     if ($rRet !== 0) {
         echo "WARNING: rsync to prod failed\n";
+
         echo "rsync output: " . implode("\n", $rOut) . "\n";
         @unlink($tarball);
         exit(0);

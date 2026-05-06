@@ -3,8 +3,8 @@
 require_once __DIR__ . '/rmqhelper.php';
 
 $release = $argv[1] ?? null;
-$commit  = $argv[2] ?? '';
-$env     = $argv[3] ?? 'qa';
+$commit = $argv[2] ?? '';
+$env = $argv[3] ?? 'qa';
 
 if (!$release) {
     fwrite(STDERR, "error! no release found!\n");
@@ -15,11 +15,11 @@ $siteDir = '/var/www/sample';
 $tarball = "/tmp/{$release}.tar.gz";
 $relPath = "$siteDir/releases/$release";
 
+#just in case releases dir doesn't exist
 if (!is_dir($relPath))
     mkdir($relPath, 0755, true);
 
-# tarballs are now content-only (fix in push.php / approve.php),
-# so extract straight into relPath. no more nested folder.
+#unpack tarball into releases folder
 exec("tar -xzf " . escapeshellarg($tarball) . " -C " .
     escapeshellarg($relPath) . " 2>&1", $out, $ret);
 if ($ret !== 0) {
@@ -29,10 +29,10 @@ if ($ret !== 0) {
 }
 @unlink($tarball);
 
-#pending pointer for tracking
+#pending for tracking
 exec("ln -sfn " . escapeshellarg($relPath) . " " . escapeshellarg("$siteDir/pending"));
 
-#point apache at this release so it can be previewed before approval
+#point apache at this so it can be previewed
 exec("ln -sfn " . escapeshellarg($relPath) . " " . escapeshellarg("$siteDir/live"));
 
 publishDeployEvent('log_deploy', [
