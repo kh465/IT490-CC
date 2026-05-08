@@ -219,6 +219,70 @@ $callback = function (AMQPMessage $msg) use ($pdo, $channel) {
             ];
         }
 
+
+        } elseif ($data['type'] === 'save_review') {
+        echo "Server: Processing review for " . $data['username'] . "\n";
+
+        if (!verifySession($pdo, $data['username'], $data['session_key'])) {
+            echo "Server: Review rejected, invalid session.\n";
+            $response = ['status' => 'failure', 'message' => 'Invalid session'];
+        } else {
+            $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
+            $stmt->execute([$data['username']]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$user) {
+                $response = ['status' => 'failure', 'message' => 'User not found'];
+            } else {
+                try {
+                    $stmt = $pdo->prepare("
+                        INSERT INTO reviews (user_id, event_title, rating, review_text, created_at)
+                        VALUES (?, ?, ?, ?, ?)
+                        ON DUPLICATE KEY UPDATE
+                            rating = VALUES(rating),
+                            review_text = VALUES(review_text),
+                            created_at = VALUES(created_at)
+                    ");
+                    $stmt->execute([
+                        $user['id'],
+                        $data['event_title'],
+                        (int)$data['rating'],
+                        $data['review_text'] ?? '',
+                        time(),
+                    ]);
+                    echo "Server: Review saved.\n";
+                    $response = ['status' => 'success'];
+                } catch (PDOException $e) {
+                    echo "Server: Review insert failed - " . $e->getMessage() . "\n";
+                    $response = ['status' => 'failure', 'message' => 'Database error'];
+                }
+            }
+        }
+
+    } elseif ($data['type'] === 'get_reviews') {
+        echo "Server: Fetching reviews for " . $data['username'] . "\n";
+
+        if (!verifySession($pdo, $data['username'], $data['session_key'])) {
+            echo "Server: get_reviews rejected, invalid session.\n";
+            $response = ['status' => 'failure', 'message' => 'Invalid session'];
+        } else {
+            $stmt = $pdo->prepare("
+                SELECT r.id, r.event_title, r.rating, r.review_text, r.created_at
+                FROM reviews r
+                JOIN users u ON r.user_id = u.id
+                WHERE u.username = ?
+                ORDER BY r.created_at DESC
+            ");
+            $stmt->execute([$data['username']]);
+            $reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo "Server: Returning " . count($reviews) . " reviews.\n";
+            $response = [
+                'status' => 'success',
+                'reviews' => $reviews,
+            ];
+        }
+
     
     } else {
         echo "Server: Unknown request type: " . ($data['type'] ?? 'null') . "\n";

@@ -20,7 +20,7 @@ try {
     $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
 
     $request = [
-        'type' => 'get_booking',
+        'type' => 'get_bookings',
         'username' => $_SESSION['username'],
         'session_key' =>  $_SESSION['session_key']
     ];
