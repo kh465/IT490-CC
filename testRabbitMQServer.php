@@ -1,3 +1,4 @@
+
 #!/usr/bin/php
 <?php
 require_once('path.inc');
@@ -168,7 +169,7 @@ if ($row = $result->fetch_assoc()) {
 	}
 }
 
-return false; // prevent any null bugs
+return false; // no matchung user found in database
 
     // lookup username in database
     // check password
