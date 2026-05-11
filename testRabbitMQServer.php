@@ -1,3 +1,4 @@
+
 #!/usr/bin/php
 <?php
 require_once('path.inc');
@@ -38,7 +39,7 @@ $con = mysqli_connect("127.0.0.1", "keven", "12345", "GC_USERS_DB");
     $stmt->bind_param("ssss", $status, $decidedBy, $notes, $release);
 
     if ($stmt->execute()) {
-        sendRemoteLog("Status set: $release → $status", "INFO");
+        sendRemoteLog("Status set: $release -> $status", "INFO");
         return true;
     } else {
         sendRemoteLog("Set status failed: " . $stmt->error, "FAIL");
@@ -113,6 +114,7 @@ if ($row = $result->fetch_assoc()) {
 	return false;
 }
 
+$password = password_hash($password, PASSWORD_DEFAULT);
 $stmt = $con->prepare("INSERT INTO users (id, password_hash) VALUES (?, ?)");
 $stmt->bind_param("ss", $username, $password);
 
@@ -154,26 +156,220 @@ if($result->num_rows == 0) {
 }
 
 
-
 if ($row = $result->fetch_assoc()) {
-	$dbpword = $row['password_hash'];
-	if ($dbpword == $password) {
+	$dbword = $row['password_hash'];
+	if (password_verify($password, $dbword)) {
 		echo "\ntrue!";
+                sendRemoteLog("Login successful for user: " . $username, "INFO");
 		return true;
-	}
-	
-		
-	else {
-		echo "\nfalse!";
-		return false;
+        } else { 
+                echo  "\nfalse!";
+                sendRemoteLog("Invalid password for user: " . $username, "WARN");
+                return false;
 	}
 }
+
+return false; // no matchung user found in database
+
+    // General logic flow:
     // lookup username in database
-    // check password
-    // $login = new loginDB();
-    //return $login->validateLogin($username,$password);
-    //return true;
-    //return true if not valid
+    // check the password to see if it matches
+    // $login = new loginDB(); function allows the user to login
+    //return $login->validateLogin($username,$password); vlidation stage
+    //return true; (user logged in aka valid user)
+    // false means the user is not in DB
+}
+
+
+function doSaveBooking($username, $session_key, $event_title, $event_description,
+                       $event_date, $event_address, $event_url, $event_thumbnail, $venue_name)
+{
+ $con = mysqli_connect("127.0.0.1", "keven", "12345", "GC_USERS_DB");
+    if (mysqli_connect_errno()) {
+        sendRemoteLog("Failed to connect to mySQL database: " . mysqli_connect_error(), "FAIL");
+        return ['status'=> 'error', 'message' => 'Database connection failed'];
+    }
+
+    if (empty($username) || empty($event_title)) {
+        
+           return ['status' => 'error', 'message'  => 'Missing username or event title'];
+    }
+
+    $now = time();
+    $booking_type = 'activity';
+    $status = 'saved';
+    $currency = 'USD';
+
+    $stmt = $con->prepare(
+        "INSERT INTO terrifictravel_bookings
+         (event_title, username, booking_type, status, currency,
+          notes, event_address, event_description, event_url, event_thumbnail, venue_name,
+          created_at_epoch, updated_at_epoch)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    );
+
+    if (!$stmt) {
+        
+            sendRemoteLog("save_booking prepare failed: " . $con->error, "FAIL");
+            return ['status'=> 'error', 'message' => 'Prepare failed'];
+    }
+
+    $stmt->bind_param("sssssssssssii",
+        $event_title, $username, $booking_type, $status, $currency,
+        $event_date, $event_address, $event_description, $event_url, $event_thumbnail, $venue_name,
+        $now, $now
+    );
+
+    if ($stmt->execute()) {
+        sendRemoteLog("Booking saved: $event_title for $username", "INFO");
+        return ['status' => 'success', 'message' => 'Booking saved'];
+    } else {
+        if ($stmt->errno === 1062) {
+            sendRemoteLog("Duplicate booking: $event_title", "WARN");
+            return ['status' => 'error', 'message' => 'This activity is already in your bookings'];
+        }
+        sendRemoteLog("save_booking failed: " . $stmt->error, "FAIL");
+        return ['status' => 'error', 'message' => 'Could not save booking'];
+    }
+}
+
+function doGetBookings($username, $session_key)
+{
+    $con = mysqli_connect("127.0.0.1", "keven", "12345", "GC_USERS_DB");
+    if (mysqli_connect_errno()) {
+        sendRemoteLog("Failed to connect to mySQL: " . mysqli_connect_error(), "FAIL");
+        return ['status' => 'error', 'message' => 'Database connection failed'];
+    }
+
+    if (empty($username)) {
+        return ['status' => 'error', 'message' => 'Missing username'];
+    }
+
+    // alias notes back to event_date so the frontend keeps working unchanged
+ $stmt = $con->prepare(
+        "SELECT event_title,
+               COALESCE(notes, '') AS event_date,
+               COALESCE(venue_name, '') AS venue_name,
+               COALESCE(event_address, '') AS event_address,
+               COALESCE(event_description, '') AS event_description,
+               COALESCE(event_url, '') AS event_url,
+               COALESCE(event_thumbnail, '') AS event_thumbnail
+         FROM terrifictravel_bookings
+         WHERE username = ?
+         ORDER BY created_at_epoch DESC"
+ );
+
+ if (!$stmt) {
+        sendRemoteLog("get_bookings prepare failed: " . $con->error, "FAIL");
+        return ['status' => 'error', 'message' => 'Prepare failed'];
+ }
+
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $bookings = [];
+    while ($row = $result->fetch_assoc()) {
+        $bookings[] = $row;
+    }
+
+    sendRemoteLog("get_bookings: " . count($bookings) . " rows for $username", "INFO");
+    return ['status' => 'success', 'bookings' => $bookings];
+}
+
+function doSaveReview($username, $session_key, $event_title, $rating, $review_text)
+{
+    $con = mysqli_connect("127.0.0.1", "keven", "12345", "GC_USERS_DB");
+    if (mysqli_connect_errno()) {
+        sendRemoteLog("Failed to connect to mySQL: " . mysqli_connect_error(), "FAIL");
+        return ['status'  => 'error', 'message'  => ' Connection failed'];
+    }
+
+    if (empty($username) || empty($event_title)) {
+        return ['status'=> 'error', 'message' => 'Missing username or event title, please insert'];
+    }
+    if ($rating < 1 || $rating > 5) {
+        return ['status' => "error", 'message' => 'Rating must be between 1 and 5, review again'];
+    }
+
+    // verify the booking actually exists for this user before reviewing it
+    $check = $con->prepare(
+        "SELECT event_title FROM terrifictravel_bookings
+         WHERE username = ? AND event_title = ? LIMIT 1"
+    );
+    $check->bind_param("ss", $username, $event_title);
+    $check->execute();
+    if ($check->get_result()->num_rows === 0) {
+        return ['status'  => 'error', 'message' => 'No matching booking found for this event'];
+    }
+
+    $now = time();
+
+    // upsert function present if the user just does a mistake it re updates instead of crashing/error
+    $stmt = $con->prepare(
+        "INSERT INTO terrifictravel_reviews
+         (username, event_title, rating, review_text, created_at_epoch)
+         VALUES (?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+            rating = VALUES(rating),
+            review_text = VALUES(review_text),
+            created_at_epoch = VALUES(created_at_epoch)"
+    );
+
+    if (!$stmt) {
+        sendRemoteLog("save_review prepare failed: " . $con->error, "FAIL");
+        return ['status' => 'error', 'message' => 'Prepare failed'];
+    }
+
+    $stmt->bind_param("ssisi", $username, $event_title, $rating, $review_text, $now);
+
+    if ($stmt->execute()) {
+        sendRemoteLog("Review saved: $event_title by $username ($rating/5)", "INFO");
+        return ['status'  => 'success', 'message' => 'Review saved'];
+    } else {
+        sendRemoteLog("save_review failed: " . $stmt->error, "FAIL");
+        return ['status' => 'error', 'message'  => 'Could not save review'];
+    }
+}
+
+function doGetReviews($username, $session_key)
+{
+    $con = mysqli_connect("127.0.0.1", "keven", "12345", "GC_USERS_DB");
+    if (mysqli_connect_errno()) {
+        sendRemoteLog("Failed to connect to mySQL: " . mysqli_connect_error(), "FAIL");
+        return ['status'  => 'error', 'message' => 'Database connection failed'];
+    }
+
+    if (empty($username)) {
+        return ['status' => 'error', 'message' => 'Missing username'];
+    }
+
+    $stmt = $con->prepare(
+        "SELECT event_title, rating, review_text, created_at_epoch
+         FROM terrifictravel_reviews
+         WHERE username = ?
+         ORDER BY created_at_epoch DESC"
+    );
+
+    if (!$stmt) {
+        sendRemoteLog("get_reviews prepare failed: " . $con->error, "FAIL");
+        return ['status' => 'error', 'message' => 'Prepare failed'];
+    }
+
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $reviews = [];
+    while ($row = $result->fetch_assoc()) {
+        $row['created_at'] = !empty($row['created_at_epoch'])
+            ? date('Y-m-d H:i', (int)$row['created_at_epoch'])
+         : '';
+        $reviews[] = $row;
+    }
+
+    sendRemoteLog("get_reviews: " . count($reviews) . " rows for $username", "INFO");
+    return ['status' => 'success', 'reviews' => $reviews];
 }
 
 function requestProcessor($request)
@@ -198,7 +394,14 @@ function requestProcessor($request)
       return doSetStatus($request['release'],$request['status'],$request['decided_by'] ?? null,$request['notes'] ?? null);
     case "log_rollback":
       return doLogRollback($request['env'],$request['release'],$request['decided_by'] ?? null,$request['notes'] ?? null);
-	
+    case "save_booking":
+      return doSaveBooking($request['username'] ?? '', $request['session_key'] ?? '', $request['event_title'] ?? '', $request['event_description'] ?? '', $request['event_date'] ?? '', $request['event_address'] ?? '', $request['event_url'] ?? '', $request['event_thumbnail'] ?? '', $request['venue_name'] ?? '');
+    case "get_bookings":
+      return doGetBookings($request['username'] ?? '', $request['session_key'] ?? '');
+    case "save_review":
+      return doSaveReview($request['username'] ?? '', $request['session_key'] ?? '', $request['event_title'] ?? '', (int)($request['rating'] ?? 0), $request['review_text'] ?? '');
+    case "get_reviews":
+      return doGetReviews($request['username'] ?? '', $request['session_key'] ?? '');
   }
   return array("returnCode" => '0', 'message'=>"Server received request and processed");
 }
@@ -208,4 +411,3 @@ $server = new rabbitMQServer("testRabbitMQ.ini","testServer");
 $server->process_requests('requestProcessor');
 exit();
 ?>
-

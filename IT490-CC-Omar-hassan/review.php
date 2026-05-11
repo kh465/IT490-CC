@@ -5,18 +5,16 @@ require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 require_once('host.ini');
 
-
 $err = '';
 $successmes = '';
 $bookings = [];
 $reviews = [];
-
 $rabbitmq_down = false;
+
 ini_set('default_socket_timeout', 5);
 
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
-    $err = "Please login first";
     exit();
 }
 
@@ -24,15 +22,16 @@ $client = null;
 try {
     $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
 } catch (Exception $e) {
-    $rabbitmq_down = true; 
+    $rabbitmq_down = true;
 }
 
 if ($client) {
 
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_review'])) { 
-        $eventName = $_POST['event_name'];
-        $rating = (int)$_POST['rating'];
-        $ratingDes = $_POST['description'];
+    // Handle review submission first if this is a POST request or something
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_review'])) {
+        $eventName = trim($_POST['event_name'] ?? '');
+        $rating = (int)($_POST['rating'] ?? 0);
+        $ratingDes = trim($_POST['description'] ?? '');
 
         if ($rating < 1 || $rating > 5) {
             $err = "Please select a rating between 1 and 5.";
@@ -40,82 +39,71 @@ if ($client) {
             $err = "Name of event not specified.";
         } else {
             $request = [
-                'type'=> 'save_review',
+                'type' => 'save_review',
                 'username' => $_SESSION['username'],
                 'session_key' => $_SESSION['session_key'],
-                'event_title'=> $eventName,
+                'event_title' => $eventName,
                 'rating' => $rating,
                 'review_text' => $ratingDes,
             ];
 
             try {
                 $response = $client->send_request($request);
-                if (isset($response['status'])) {
+                if (isset($response['status']) && $response['status'] === 'success') {
                     $successmes = "Review has been saved for: " . htmlspecialchars($eventName);
-                } else {
-
+                }   else {
+                   
                     $err = $response['message'] ?? "Could not save review.";
                 }
-                } catch (Exception $e) {
-                    $rabbitmq_down = true;
-                 }
-    }
-
-    try {
-
-    $request = [
-        'type' => 'get_booking',
-        'username' => $_SESSION['username'],
-        'session_key' => $_SESSION['session_key'],
-    ];
-
-    $response = $client->send_request($request);
-
-    if (isset($response['status'])) {
-        $bookings = $response['bookings'];
-    } else {
-        $err = $response['message'] ?? "Error: No bookings found.";
-    }
-
-} catch (Exception $e) {
-    $rabbitmq_down = true;
-}
-
-try {
-
-    $request = [
-        'type' => 'get_reviews',
-        'username' => $_SESSION['username'],
-        'session_key' => $_SESSION['session_key'],
-    ];
-
-        $response = $client->send_request($request);
-         if (isset($response['status'])) {
-            $reviews = $response['reviews'];
+            } catch (Exception $e) {
+                $rabbitmq_down = true;
+            }
         }
-    } 
-    catch (Exception $e) {
-    $rabbitmq_down = true;
-}
-
     }
-} 
 
+    // Always fetch bookings (for the dropdown) on every page load
+    try {
+        $request = [
+            'type' => 'get_bookings',
+            'username'=> $_SESSION['username'],
+            'session_key' => $_SESSION['session_key'],
+        ];
+        $response = $client->send_request($request);
+
+        if (isset($response['status']) && $response['status'] === 'success') {
+            $bookings = $response['bookings'] ?? [];
+        }
+    } catch (Exception $e) {
+        $rabbitmq_down = true;
+    }
+
+    // Always fetch existing reviews for the user on every page load
+    try {
+        $request = [
+            'type' => 'get_reviews',
+            'username' => $_SESSION['username'],
+            'session_key' => $_SESSION['session_key'],
+        ];
+        $response = $client->send_request($request);
+
+        if (isset($response['status']) && $response['status'] === 'success') {
+            $reviews = $response['reviews'] ?? [];
+        }
+    } catch (Exception $e) {
+        $rabbitmq_down = true;
+    }
+}
 
 function renderStars($rating) {
+
     $rating = (int)$rating;
     $stars = '';
-    
+
     for ($i = 1; $i <= 5; $i++) {
-        if ($i <= $rating) {
-            $stars .= '&#9733;';
-        } else {
-            $stars .= '&#9734;';
-        }
+        $stars .= ($i <= $rating) ? '&#9733;' : '&#9734;';
     }
     return $stars;
 }
-
 ?>
 
 <!DOCTYPE html>
@@ -154,6 +142,8 @@ function renderStars($rating) {
 
 <div class= "main-container">
     <h1>Review and Rate Your Bookings</h1>
+
+    
 
     <?php if ($err): ?>
         <p style = "color: red; font-weight: bold;"><?php echo htmlspecialchars($err); ?></p>
